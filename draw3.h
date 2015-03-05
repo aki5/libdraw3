@@ -1,4 +1,8 @@
 
+enum {
+	Ssubpix = 0,
+};	
+
 extern int width;
 extern int height;
 extern int stride;
@@ -38,7 +42,6 @@ maxi(int a, int b)
 	return a > b ? a : b;
 }
 
-
 static inline int
 det2i(
 	int a, int b,
@@ -56,6 +59,18 @@ ori2i(short *pa, short *pb, short *pc)
 	c = pa[0]-pc[0];
 	d = pa[1]-pc[1];
 	return det2i(a, b, c, d);
+}
+
+static inline int
+ori2i_dx(short *pa, short *pb)
+{
+	return (pb[1] - pa[1]);
+}
+
+static inline int
+ori2i_dy(short *pa, short *pb)
+{
+	return -(pb[0] - pa[0]);
 }
 
 static inline int
@@ -78,22 +93,16 @@ isect2i(short *a, short *b, short *c, short *d)
 	abd = signumi(ori2i(a, b, d));
 	cda = signumi(ori2i(c, d, a));
 	cdb = signumi(ori2i(c, d, b));
-//printf("isect2i: abc %d abd %d cda %d cdb %d\n", abc, abd, cda, cdb);
 	if(abc == -abd && cda == -cdb)
 		return 1;
-//printf("isect2i: step1\n");
 	if(abc == 0 && ptonseg_col(a, b, c))
 		return 1;
-//printf("isect2i: step2\n");
 	if(abd == 0 && ptonseg_col(a, b, d))
 		return 1;
-//printf("isect2i: step3\n");
 	if(cda == 0 && ptonseg_col(c, d, a))
 		return 1;
-//printf("isect2i: step4\n");
 	if(cdb == 0 && ptonseg_col(c, d, b))
 		return 1;
-//printf("isect2i: step5\n");
 	return 0;
 }
 
