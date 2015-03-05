@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <X11/extensions/XShm.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -36,7 +37,7 @@ to16bpp(void)
 		spix = framebuffer + ysoff;
 		dpix = (ushort *)(shmimage->data + ydoff);
 		for(i = 0; i < width; i++, spix += 4, dpix++){
-			uchar r, g, b, a;
+			uchar r, g, b;
 			b = spix[0] >> 3;
 			g = spix[1] >> 2;
 			r = spix[2] >> 3;
@@ -75,8 +76,9 @@ shminit(void)
 	shminfo.readOnly = False;
 	XShmAttach(display, &shminfo);
 
-	framebuffer = shmimage->data;
+	framebuffer = (uchar *)shmimage->data;
 	stride = shmimage->bytes_per_line;
+	return 0;
 }
 
 static void
@@ -112,7 +114,7 @@ drawinit(int w, int h)
 	}
 
 	shminit();
-	XSelectInput(display, window, ButtonPressMask|ExposureMask|StructureNotifyMask);
+	XSelectInput(display, window, KeyPressMask|ButtonPressMask|ExposureMask|StructureNotifyMask);
 	XMapWindow(display, window);
 	return XConnectionNumber(display);
 }
@@ -163,6 +165,9 @@ drawhandle(int fd, int block)
 		case Expose:
 			flags |= 1; /* need redraw */
 			continue;
+		case KeyPress:
+			flags |= 4;
+			continue;
 		case ButtonPress:
 			exit(0);
 		case ConfigureNotify:{
@@ -187,6 +192,15 @@ drawhandle(int fd, int block)
 		fprintf(stderr, "unknown xevent %d\n", ev.type);
 	}
 	return flags;
+}
+
+int
+drawhalt(void)
+{
+	drawflush();
+	while((drawhandle(XConnectionNumber(display), 1) & 4) == 0)
+		;
+	return 0;
 }
 
 int

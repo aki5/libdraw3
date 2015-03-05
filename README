@@ -1,0 +1,29 @@
+
+libdraw3 - lightweight graphics for you
+
+A number of observations inspired writing this library
+	- memory has grown large compared to frame buffer size
+	- cpus are more than fast enough for small time software 3d
+	- every device with a display has a graphics accelerator for big time 3d
+	- there are no simple cross platform graphics libraries
+
+Libdraw3 supports two kinds of objects
+	- images, and
+	- triangles
+		- which can be rendered to images
+		- with images as textures
+		- the usual perspective corrected interpolation jazz
+
+Libdraw3 only supports buffered operation
+	- ask for an image
+	- draw to it
+	- give it to display
+
+Libdraw3 supports window resizing
+	- the new image you get happens to be of a different size
+	
+Libdraw3 is designed around the observation that what graphics acceleration does well is triangles
+	- a function is called per vertex (a vertex shader)
+	- a function is called per pixel (a pixel shader)
+	- values passed per vertex are hyperbolically interpolated in the pixel realm
+	- the pixel realm can access textures based on any of its interpolated values
