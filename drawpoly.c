@@ -94,23 +94,6 @@ drawblop(uchar *img, int width, int height, short *p, uchar *color)
 	drawtri(img, width, height, p, a, b, color);
 }
 
-
-long
-polyarea(short *pt, int *poly, int npoly)
-{
-	short *a, *b, *c;
-	int i;
-	long area;
-	area = 0;
-	a = pt + 2*poly[0];
-	for(i = 1; i < npoly-1; i++){
-		b = pt + 2*poly[i];
-		c = pt + 2*poly[i+1];
-		area += ori2i(b, c, a);
-	}
-	return area;
-}
-
 void
 showcolors(uchar *img, int width, int height)
 {
@@ -202,8 +185,8 @@ retry:
 				char fname[32];
 				snprintf(fname, sizeof fname, "poly%03d.txt", dumpseq++);
 				fp = fopen(fname, "wb");
-				for(i = 0; i < inpoly; i++)
-					fprintf(fp, "%d %d\n", pt[2*poly[i]], pt[2*poly[i]+1]);
+				for(i = 0; i < inpoly;i++)
+					fprintf(fp, "%d %d #%d\n", pt[2*poly[i]], pt[2*poly[i]+1], poly[i]);
 				fclose(fp);
 				debugpoly(img, width, height, pt, poly, inpoly);
 				npoly = inpoly;
@@ -212,7 +195,7 @@ retry:
 				showcolors(img, width, height);
 				goto retry;
 			}
-			fprintf(stderr, "bugger all!, area %ld, npolys %d, inpolys %d\n", polyarea(pt, poly, inpoly), npoly, inpoly);
+			fprintf(stderr, "bugger all!, area %d, npolys %d, inpolys %d\n", polyarea(pt, poly, inpoly, (short[2]){-1,-1}), npoly, inpoly);
 			return -1;
 		}
 	}

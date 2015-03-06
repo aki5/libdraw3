@@ -123,3 +123,86 @@ polysegisect(short *pt, int *poly, int npoly, int a, int b)
 	}
 	return 0;
 }
+
+
+/*
+ *	these guys are clearly broken -- "holes" don't get treated right.
+static inline int
+windstep(short *a, short *b, short *p)
+{
+	if(a[1] <= p[1]){
+		if(b[1] > p[1])
+			if(ori2i(a, b, p) < 0)
+				return 1;
+	} else {
+		if(b[1] <= p[1])
+			if(ori2i(a, b, p) > 0)
+				return -1;
+	}
+	return 0;
+}
+
+static inline int
+polywind(short *pt, int *poly, int npoly, short *p)
+{
+	short *a, *b;
+	int windnum;
+	int i, ni;
+	windnum = 0;
+	for(i = 0; i < npoly; i++){
+		ni = (i == npoly-1) ? 0 : i+1;
+		a = pt + 2*poly[i];
+		b = pt + 2*poly[ni];
+		windnum += windstep(a, b, p);
+	}
+	return windnum;
+}
+
+static inline int
+ptwind(short *pt, int npt, short *p)
+{
+	short *a, *b;
+	int windnum;
+	int i, ni;
+	windnum = 0;
+	for(i = 0; i < npt; i++){
+		ni = (i == npt-1) ? 0 : i+1;
+		a = pt + 2*i;
+		b = pt + 2*ni;
+		windnum += windstep(a, b, p);
+	}
+	return windnum;
+}
+*/
+
+static inline int
+polyarea(short *pt, int *poly, int npoly, short *p)
+{
+	short *a, *b;
+	int windnum;
+	int i, ni;
+	windnum = 0;
+	for(i = 0; i < npoly; i++){
+		ni = (i == npoly-1) ? 0 : i+1;
+		a = pt + 2*poly[i];
+		b = pt + 2*poly[ni];
+		windnum += ori2i(a, b, p);
+	}
+	return windnum;
+}
+
+static inline int
+ptarea(short *pt, int npt, short *p)
+{
+	short *a, *b;
+	int windnum;
+	int i, ni;
+	windnum = 0;
+	for(i = 0; i < npt; i++){
+		ni = (i == npt-1) ? 0 : i+1;
+		a = pt + 2*i;
+		b = pt + 2*ni;
+		windnum += ori2i(a, b, p);
+	}
+	return windnum;
+}
