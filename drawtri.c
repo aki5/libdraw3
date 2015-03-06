@@ -10,6 +10,14 @@ drawpixel(uchar *img, int width, short x, short y, u32int color, u32int mask)
 	if(!mask) *pix = color;
 }
 
+static void
+bbox_clamp(short *xsp, short *ysp, short *xep, short *yep, int width, int height, short *a, short *b, short *c, int subpix)
+{
+	*xsp = maxi(0, mini(a[0], mini(b[0], c[0]))) >> subpix;
+	*ysp = maxi(0, mini(a[1], mini(b[1], c[1]))) >> subpix;
+	*xep = ((mini((width<<subpix)-1, maxi(a[0], maxi(b[0], c[0])))+(1<<subpix)-1) >> subpix) + 1;
+	*yep = ((mini((height<<subpix)-1, maxi(a[1], maxi(b[1], c[1])))+(1<<subpix)-1) >> subpix) + 1;
+}
 
 void
 drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color, int subpix)
@@ -22,12 +30,10 @@ drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *
 	short ystart, yend;
 	short p[2];
 
-	xstart = maxi(0, mini(a[0], mini(b[0], c[0]))) >> subpix;
-	ystart = maxi(0, mini(a[1], mini(b[1], c[1]))) >> subpix;
+	bbox_clamp(&xstart, &ystart, &xend, &yend, width, height, a, b, c, subpix);
+
 	p[0] = xstart << subpix;
 	p[1] = ystart << subpix;
-	xend = ((mini((width<<subpix)-1, maxi(a[0], maxi(b[0], c[0])))+(1<<subpix)-1) >> subpix) + 1;
-	yend = ((mini((height<<subpix)-1, maxi(a[1], maxi(b[1], c[1])))+(1<<subpix)-1) >> subpix) + 1;
 
 	abp_y = ori2i(a, b, p);
 	bcp_y = ori2i(b, c, p);
@@ -69,3 +75,4 @@ drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntri
 		drawtri(img, width, height, a, b, c, colors+4*i, subpix);
 	}
 }
+
