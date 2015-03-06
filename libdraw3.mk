@@ -5,7 +5,7 @@ DRAW3_HFILES=\
 
 DRAW3_OFILES=\
 	$(R)/drawx11.o\
-	$(R)/drawtri.o\
+	$(R)/drawtri_simd.o\
 	$(R)/drawpoly.o\
 
 $(R)/%.o: $(R)/%.c
