@@ -44,8 +44,8 @@ drawline(uchar *img, int width, int height, short *a, short *b, uchar *color)
 	c[1] = b[1] + perp[1];
 	d[0] = a[0] + perp[0];
 	d[1] = a[1] + perp[1];
-	drawtri(img, width, height, a, b, c, color);
-	drawtri(img, width, height, a, c, d, color);
+	drawtri(img, width, height, a, b, c, color, 0);
+	drawtri(img, width, height, a, c, d, color, 0);
 }
 
 /* awk 'BEGIN{N=5; for(i = 0; i < N; i++) printf "%d,%d,\n", 5*-sin(6.2831853*i/N), 5*cos(6.2831853*i/N)}'*/
@@ -87,11 +87,11 @@ drawblop(uchar *img, int width, int height, short *p, uchar *color)
 		a[1] = p[1] + blop[2*i+1];
 		b[0] = p[0] + blop[2*(i+1)+0];
 		b[1] = p[1] + blop[2*(i+1)+1];
-		drawtri(img, width, height, p, b, a, color);
+		drawtri(img, width, height, p, b, a, color, 0);
 	}
 	a[0] = p[0] + blop[0];
 	a[1] = p[1] + blop[1];
-	drawtri(img, width, height, p, a, b, color);
+	drawtri(img, width, height, p, a, b, color, 0);
 }
 
 void
@@ -113,8 +113,8 @@ showcolors(uchar *img, int width, int height)
 		d[0] = (x+1)*dim;
 		d[1] = y*dim;
 		idx2color(i, color);
-		drawtri(img, width, height, a, b, c, color);
-		drawtri(img, width, height, a, c, d, color);
+		drawtri(img, width, height, a, b, c, color, 0);
+		drawtri(img, width, height, a, c, d, color, 0);
 	}
 }
 
@@ -137,7 +137,7 @@ debugpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly)
 }
 
 int
-drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color)
+drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix)
 {
 	int i, ni, nni;
 	int nconc;
@@ -170,7 +170,7 @@ retry:
 				idx2color(ci, col);
 				ci++;
 			}
-			drawtri(img, width, height, a, b, c, col);
+			drawtri(img, width, height, a, b, c, col, subpix);
 			next[i] = nni;
 			npoly--;
 			nconc = 0;

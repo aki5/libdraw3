@@ -1,7 +1,10 @@
-R:=.
-include libdraw3.mk
+
+CFLAGS=-O3
 
 all: libdraw3.a
 
 clean:
-	rm -f *.a $(DRAW3_OFILES)
+	rm -f *.a *.o
+
+R:=.
+include libdraw3.mk

@@ -13,3 +13,5 @@ $(R)/%.o: $(R)/%.c
 
 libdraw3.a: $(DRAW3_OFILES)
 	$(AR) r $@  $(DRAW3_OFILES)
+
+$(DRAW_OFILES): $(DRAW_HFILES)

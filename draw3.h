@@ -1,8 +1,4 @@
 
-enum {
-	Ssubpix = 0,
-};	
-
 extern int width;
 extern int height;
 extern int stride;
@@ -16,9 +12,9 @@ void drawreq(void);
 int drawbusy(void);
 int drawhalt(void);
 
-void drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color);
-int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color);
-void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris);
+void drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color, int subpix);
+int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix);
+void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 
 void drawline(uchar *img, int width, int height, short *a, short *b, uchar *color);
 void idx2color(int idx, uchar *color);
