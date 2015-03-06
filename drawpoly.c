@@ -2,20 +2,6 @@
 #include "draw3.h"
 #include <math.h>
 
-static inline int
-polyinside(short *pt, int *poly, int *next, int i, int n, short *a, short *b, short *c)
-{
-	short *p;
-	int j;
-	for(j = 0; j < n; j++){
-		p = pt + 2*poly[i];
-		if(ori2i(a, b, p) >= 0 && ori2i(b, c, p) >= 0 && ori2i(c, a, p) >= 0)
-			return 1;
-		i = next[i];
-	}
-	return 0;
-}
-
 static uchar red[4] = { 0x80, 0x30, 0xff, 0xff };
 static uchar grey[4] = { 0x50, 0x50, 0x50, 0xff };
 
@@ -134,6 +120,20 @@ debugpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly)
 		drawline(img, width, height, b, a, red);
 		drawblop(img, width, height, b, colors[i%3]);
 	}
+}
+
+static inline int
+polyinside(short *pt, int *poly, int *next, int i, int n, short *a, short *b, short *c)
+{
+	short *p;
+	int j;
+	for(j = 0; j < n; j++){
+		p = pt + 2*poly[i];
+		if(ori2i(a, b, p) >= 0 && ori2i(b, c, p) >= 0 && ori2i(c, a, p) >= 0)
+			return 1;
+		i = next[i];
+	}
+	return 0;
 }
 
 int
