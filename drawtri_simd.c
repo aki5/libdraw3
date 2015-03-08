@@ -29,6 +29,19 @@ drawpixel(uchar *img, int width, short x0, short y0, u32int color, v4int mask)
 
 }
 
+/*
+ *	the top-left rule: move a bottom edge up and the right edge left
+ */
+static inline v4int
+topleft(short *a, short *b, int subpix)
+{
+	if(a[1] == b[1] && a[0] < b[0]) /* bottom (goes right) */
+		return vec4ir(-1<<subpix);
+	if(a[1] > b[1]) /* right (goes up) */
+		return vec4ir(-1<<subpix);
+	return vec4ir(0); /* top or left */
+}
+
 static void
 bbox_clamp(short *xsp, short *ysp, short *xep, short *yep, int width, int height, short *a, short *b, short *c, int subpix)
 {
@@ -48,7 +61,6 @@ drawtri_horse(uchar *img, int xstart, int ystart, int xend, int yend, short *a, 
 
 	short x0, y0;
 
-
 	enum { xstep = 2, ystep = 2 };
 
 	abp_dx = vec4ir(ori2i_dx(a, b) << subpix);
@@ -63,6 +75,10 @@ drawtri_horse(uchar *img, int xstart, int ystart, int xend, int yend, short *a, 
 	abp_y = vec4ir(ori2i(a, b, p)) + vec4i(0, abp_dx[0], abp_dy[0], abp_dx[0]+abp_dy[0]);
 	bcp_y = vec4ir(ori2i(b, c, p)) + vec4i(0, bcp_dx[0], bcp_dy[0], bcp_dx[0]+bcp_dy[0]);
 	cap_y = vec4ir(ori2i(c, a, p)) + vec4i(0, cap_dx[0], cap_dy[0], cap_dx[0]+cap_dy[0]);
+
+	abp_y += topleft(a, b, subpix);
+	bcp_y += topleft(b, c, subpix);
+	cap_y += topleft(c, a, subpix);
 
 	abp_dx = abp_dx * xstep;
 	bcp_dx = bcp_dx * xstep;
@@ -79,8 +95,8 @@ drawtri_horse(uchar *img, int xstart, int ystart, int xend, int yend, short *a, 
 		for(x0 = xstart; x0 < xend; x0 += xstep){
 			mask = (abp | bcp | cap) >> 31;
 			if((mask[0]&mask[1]&mask[2]&mask[3]) == 0){
-//				mask |= vec4i(0, -(x0 == xend-1), 0, -(x0 == xend-1));
-//				mask |= vec4i(0, 0, -(y0 == yend-1), -(y0 == yend-1));
+				mask |= vec4i(0, -(x0 == xend-1), 0, -(x0 == xend-1));
+				mask |= vec4i(0, 0, -(y0 == yend-1), -(y0 == yend-1));
 				drawpixel(img, width, x0, y0, *(u32int*)color, mask);
 			}
 			abp += abp_dx;
@@ -137,7 +153,8 @@ drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *
 	short xstart, xend;
 	short ystart, yend;
 	bbox_clamp(&xstart, &ystart, &xend, &yend, width, height, a, b, c, subpix);
-	drawtri_subdiv(img, xstart, ystart, xend, yend, a, b, c, color, subpix);
+	drawtri_horse(img, xstart, ystart, xend, yend, a, b, c, color, subpix);
+//	drawtri_subdiv(img, xstart, ystart, xend, yend, a, b, c, color, subpix);
 }
 
 void
