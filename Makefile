@@ -1,5 +1,5 @@
 
-CFLAGS=-O3
+CFLAGS=-O3 -fomit-frame-pointer
 
 all: libdraw3.a
 
