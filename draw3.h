@@ -175,30 +175,30 @@ static inline int
 polyarea(short *pt, int *poly, int npoly, short *p)
 {
 	short *a, *b;
-	int windnum;
+	int area;
 	int i, ni;
-	windnum = 0;
+	area = 0;
 	for(i = 0; i < npoly; i++){
 		ni = (i == npoly-1) ? 0 : i+1;
 		a = pt + 2*poly[i];
 		b = pt + 2*poly[ni];
-		windnum += ori2i(a, b, p);
+		area += ori2i(a, b, p);
 	}
-	return windnum;
+	return area;
 }
 
 static inline int
 ptarea(short *pt, int npt, short *p)
 {
 	short *a, *b;
-	int windnum;
+	int area;
 	int i, ni;
-	windnum = 0;
+	area = 0;
 	for(i = 0; i < npt; i++){
 		ni = (i == npt-1) ? 0 : i+1;
 		a = pt + 2*i;
 		b = pt + 2*ni;
-		windnum += ori2i(a, b, p);
+		area += ori2i(a, b, p);
 	}
-	return windnum;
+	return area;
 }
