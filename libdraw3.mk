@@ -4,9 +4,10 @@ DRAW3_HFILES=\
 	$(R)/draw3.h\
 
 DRAW3_OFILES=\
-	$(R)/drawx11.o\
+	$(R)/drawx11.o $(R)/keysym2ucs.o \
 	$(R)/drawtri_simd.o\
 	$(R)/drawpoly.o\
+	$(R)/drawrect.o\
 
 $(R)/%.o: $(R)/%.c
 	$(CC) -I$(R) $(CFLAGS) -c -o $@ $<

@@ -1,8 +1,103 @@
+/* I wish we had iota */
+enum {
+	MaxMouse = 8,
+	AnyMouse = (1<<(MaxMouse+1))-1,
+	Mouse0 = 1<<0,
+	Mouse1 = 1<<1,
+	Mouse2 = 1<<2,
+	Mouse3 = 1<<3,
+	Mouse4 = 1<<4,
+	Mouse5 = 1<<5,
+	Mouse6 = 1<<6,
+	Mouse7 = 1<<7,
+	Mouse8 = 1<<8,
+	LastMouse = Mouse8,
 
-extern int width;
-extern int height;
-extern int stride;
-extern uchar *framebuffer;
+	KeyUtf8 = 1<<11,
+	KeyAlt = 1<<12,
+	KeyBackSpace = 1<<13,
+	KeyBreak = 1<<14,
+	KeyControl = 1<<15,
+	KeyDel = 1<<16,
+	KeyDown = 1<<17,
+	KeyEnd = 1<<18,
+	KeyEnter = 1<<19,
+	KeyHome = 1<<20,
+	KeyHyper = 1<<21,
+	KeyIns = 1<<22,
+	KeyLeft = 1<<23,
+	KeyMeta = 1<<24,
+	KeyPageDown = 1<<25,
+	KeyPageUp = 1<<26,
+	KeyRight = 1<<27,
+	KeyShift = 1<<28,
+	KeySuper = 1<<29,
+	KeyTab = 1<<30,
+	KeyUp = 1<<31,
+};
+
+typedef struct Rect Rect;
+typedef struct Image Image;
+typedef struct Input Input;
+
+struct Rect {
+	int u0;
+	int v0;
+	int uend;
+	int vend;
+};
+
+struct Image {
+	Rect r;
+	int stride;
+	int len;
+	uchar *img;
+};
+
+struct Input {
+	int mouse;
+	short xy[2];
+	u64int begin;
+	u64int on;
+	u64int end;
+	char str[5];
+};
+
+static inline int
+ptinrect(short *uv, Rect *r)
+{
+	if(uv[0] >= r->u0 && uv[0] < r->uend && uv[1] >= r->v0 && uv[1] < r->vend)
+		return 1;
+	return 0;
+}
+
+static inline void
+cliprect(Rect *r, Rect cr)
+{
+	if(r->u0 < cr.u0)
+		r->u0 = cr.u0;
+	if(r->v0 < cr.v0)
+		r->v0 = cr.v0;
+	if(r->uend > cr.uend)
+		r->uend = cr.uend;
+	if(r->vend > cr.vend)
+		r->vend = cr.vend;
+}
+
+static inline int durect(Rect *r){ return r->uend-r->u0; }
+static inline int dvrect(Rect *r){ return r->vend-r->v0; }
+static inline int rectmidpt(Rect *r, short *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
+
+#define rect(a, b, c, d) (Rect){.u0=a, .v0=b, .uend=c, .vend=d}
+#define color(r, g, b, a) (uchar[]){b, g, r, a}
+
+extern Input *inputs;
+extern int ninputs;
+
+extern Image screen;
+
+#define mousebegin(p) (((p)->begin & AnyMouse) != 0)
+#define needredraw(fd, block) drawhandle(fd, block)
 
 int drawinit(int w, int h);
 void drawflush(void);
@@ -12,12 +107,15 @@ void drawreq(void);
 int drawbusy(void);
 int drawhalt(void);
 
-void drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color, int subpix);
+//void drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color, int subpix);
+void drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color);
 int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix);
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
+void drawrect(Image *img, Rect r, uchar *color);
 
 void drawline(uchar *img, int width, int height, short *a, short *b, uchar *color);
 void idx2color(int idx, uchar *color);
+Input *getinputs(Input **ep);
 
 static inline int
 signumi(int x)
@@ -47,6 +145,12 @@ det2i(
 }
 
 static inline int
+dot2i(short *a, short *b)
+{
+	return a[0]*b[0] + a[1]*b[1];
+}
+
+static inline int
 ori2i(short *pa, short *pb, short *pc)
 {
 	short a, b, c, d;
@@ -54,6 +158,17 @@ ori2i(short *pa, short *pb, short *pc)
 	b = pb[1]-pc[1];
 	c = pa[0]-pc[0];
 	d = pa[1]-pc[1];
+	return det2i(a, b, c, d);
+}
+
+static inline int
+nori2i(short *pa, short *pb, short *pc)
+{
+	short a, b, c, d;
+	a = pb[0]-pa[0];
+	b = pb[1]-pa[1];
+	c = pc[0]-pa[0];
+	d = pc[1]-pa[1];
 	return det2i(a, b, c, d);
 }
 
@@ -119,57 +234,6 @@ polysegisect(short *pt, int *poly, int npoly, int a, int b)
 	}
 	return 0;
 }
-
-
-/*
- *	these guys are clearly broken -- "holes" don't get treated right.
-static inline int
-windstep(short *a, short *b, short *p)
-{
-	if(a[1] <= p[1]){
-		if(b[1] > p[1])
-			if(ori2i(a, b, p) < 0)
-				return 1;
-	} else {
-		if(b[1] <= p[1])
-			if(ori2i(a, b, p) > 0)
-				return -1;
-	}
-	return 0;
-}
-
-static inline int
-polywind(short *pt, int *poly, int npoly, short *p)
-{
-	short *a, *b;
-	int windnum;
-	int i, ni;
-	windnum = 0;
-	for(i = 0; i < npoly; i++){
-		ni = (i == npoly-1) ? 0 : i+1;
-		a = pt + 2*poly[i];
-		b = pt + 2*poly[ni];
-		windnum += windstep(a, b, p);
-	}
-	return windnum;
-}
-
-static inline int
-ptwind(short *pt, int npt, short *p)
-{
-	short *a, *b;
-	int windnum;
-	int i, ni;
-	windnum = 0;
-	for(i = 0; i < npt; i++){
-		ni = (i == npt-1) ? 0 : i+1;
-		a = pt + 2*i;
-		b = pt + 2*ni;
-		windnum += windstep(a, b, p);
-	}
-	return windnum;
-}
-*/
 
 static inline int
 polyarea(short *pt, int *poly, int npoly, short *p)
