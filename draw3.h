@@ -1,19 +1,13 @@
-/* I wish we had iota */
+
 enum {
 	MaxMouse = 8,
-	AnyMouse = (1<<(MaxMouse+1))-1,
 	Mouse0 = 1<<0,
-	Mouse1 = 1<<1,
-	Mouse2 = 1<<2,
-	Mouse3 = 1<<3,
-	Mouse4 = 1<<4,
-	Mouse5 = 1<<5,
-	Mouse6 = 1<<6,
-	Mouse7 = 1<<7,
-	Mouse8 = 1<<8,
-	LastMouse = Mouse8,
+	LastMouse = Mouse0<<MaxMouse,
+	AnyMouse = (LastMouse<<1)-Mouse0,
+	DAnyKey = ~AnyMouse, // X11 defines AnyKey, so we can not.
 
-	KeyUtf8 = 1<<11,
+	KeyStr = 1<<11,
+
 	KeyAlt = 1<<12,
 	KeyBackSpace = 1<<13,
 	KeyBreak = 1<<14,
@@ -39,6 +33,9 @@ enum {
 typedef struct Rect Rect;
 typedef struct Image Image;
 typedef struct Input Input;
+typedef struct DFont DFont;
+typedef struct DGlyph DGlyph;
+typedef struct DFontImpl DFontImpl;
 
 struct Rect {
 	int u0;
@@ -51,6 +48,7 @@ struct Image {
 	Rect r;
 	int stride;
 	int len;
+	int dirty;
 	uchar *img;
 };
 
@@ -63,12 +61,43 @@ struct Input {
 	char str[5];
 };
 
+struct DFont {
+	Image *atlas;
+	DGlyph *glyps;
+	int nglyps;
+	int aglyps;
+	DFontImpl *_internal;
+};
+
+struct DGlyph {
+	int code;
+	Rect r;
+	short yoff;
+	short adv;
+};
+
 static inline int
 ptinrect(short *uv, Rect *r)
 {
 	if(uv[0] >= r->u0 && uv[0] < r->uend && uv[1] >= r->v0 && uv[1] < r->vend)
 		return 1;
 	return 0;
+}
+
+static inline int
+ptinellipse(short *uv, short *c, short *d, int rad)
+{
+	short d1[2], d2[2];
+	int mag1, mag2;
+
+	d1[0] = uv[0] - c[0];
+	d1[1] = uv[1] - c[1];
+	d2[0] = uv[0] - d[0];
+	d2[1] = uv[1] - d[1];
+
+	mag1 = d1[0]*d1[0] + d1[1]*d1[1];
+	mag2 = d2[0]*d2[0] + d2[1]*d2[1];
+	return (mag1+mag2) <= 2*rad*rad;
 }
 
 static inline void
@@ -84,10 +113,17 @@ cliprect(Rect *r, Rect cr)
 		r->vend = cr.vend;
 }
 
+static inline int
+rectisect(Rect a, Rect b)
+{
+	return a.u0 < b.uend && b.u0 < a.uend && a.v0 < b.vend && b.v0 < a.vend;
+}
+
 static inline int durect(Rect *r){ return r->uend-r->u0; }
 static inline int dvrect(Rect *r){ return r->vend-r->v0; }
 static inline int rectmidpt(Rect *r, short *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
 
+#define pt(a, b) (short[]){a, b}
 #define rect(a, b, c, d) (Rect){.u0=a, .v0=b, .uend=c, .vend=d}
 #define color(r, g, b, a) (uchar[]){b, g, r, a}
 
@@ -97,11 +133,12 @@ extern int ninputs;
 extern Image screen;
 
 #define mousebegin(p) (((p)->begin & AnyMouse) != 0)
-#define needredraw(fd, block) drawhandle(fd, block)
+#define keybegin(p) (((p)->begin & DAnyKey) != 0)
 
 int drawinit(int w, int h);
-void drawflush(void);
-int drawhandle(int fd, int doblock);
+Input *drawevents(Input **inepp);
+Input *drawevents_nonblock(Input **inepp);
+
 int drawfd(void);
 void drawreq(void);
 int drawbusy(void);
@@ -112,6 +149,12 @@ void drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color);
 int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix);
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
+
+static inline void
+drawpixel(Image *img, short *pt, uchar *color)
+{
+	drawrect(img, rect(pt[0],pt[1],pt[0]+1,pt[1]+1), color);
+}
 
 void drawline(uchar *img, int width, int height, short *a, short *b, uchar *color);
 void idx2color(int idx, uchar *color);

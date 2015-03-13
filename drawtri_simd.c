@@ -13,7 +13,7 @@ vec4ir(int v)
 
 
 static inline void
-drawpixel(Image *img, short x0, short y0, u32int color, v4int mask)
+fragment(Image *img, short x0, short y0, u32int color, v4int mask)
 {
 	u32int *pix;
 	int off = y0*img->stride + x0*4;
@@ -97,7 +97,7 @@ drawtri_horse(Image *img, Rect *r, short *a, short *b, short *c, uchar *color)
 			if((mask[0]&mask[1]&mask[2]&mask[3]) == 0){
 				mask |= vec4i(0, -(u0 == r->uend-1), 0, -(u0 == r->uend-1));
 				mask |= vec4i(0, 0, -(v0 == r->vend-1), -(v0 == r->vend-1));
-				drawpixel(img, u0, v0, *(u32int*)color, mask);
+				fragment(img, u0, v0, *(u32int*)color, mask);
 			}
 			abp += abp_dx;
 			bcp += bcp_dx;
@@ -112,6 +112,7 @@ drawtri_horse(Image *img, Rect *r, short *a, short *b, short *c, uchar *color)
 void
 drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color)
 {
+	img->dirty = 1;
 	cliprect(&r, img->r);
 	rect_trisetup(&r, a, b, c);
 	drawtri_horse(img, &r, a, b, c, color);

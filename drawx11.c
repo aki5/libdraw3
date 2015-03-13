@@ -25,9 +25,6 @@ static Window window;
 static XImage *shmimage;
 static XShmSegmentInfo shminfo;
 
-static int needflush;
-static int flushing;
-
 Input *inputs;
 int ninputs;
 static int ainputs;
@@ -41,36 +38,40 @@ Image screen;
 
 long keysym2ucs(KeySym key);
 
-static char *
-utf8_keysym(KeySym key)
+static int
+utf8_keysym(char *keystr, int cap, KeySym key)
 {
-	static __thread char utf8key[5];
+	int len;
 	long rune;
 	if((rune = keysym2ucs(key)) == -1)
-		return NULL;
+		return 0;
 	if(rune <= 0x7f){
-		utf8key[0] = rune;
-		utf8key[1] = '\0';
+		keystr[0] = rune;
+		keystr[1] = '\0';
+		len = 1;
 	} else if(rune <= 0x7ff){
-		utf8key[0] = 0xc0|((rune>>6)&0x1f);
-		utf8key[1] = 0x80|((rune>>0)&0x3f);
-		utf8key[2] = '\0';
+		keystr[0] = 0xc0|((rune>>6)&0x1f);
+		keystr[1] = 0x80|((rune>>0)&0x3f);
+		keystr[2] = '\0';
+		len = 2;
 	} else if(rune <= 0xfff){
-		utf8key[0] = 0xe0|((rune>>12)&0x0f);
-		utf8key[1] = 0x80|((rune>>6)&0x3f);
-		utf8key[2] = 0x80|((rune>>0)&0x3f);
-		utf8key[3] = '\0';
+		keystr[0] = 0xe0|((rune>>12)&0x0f);
+		keystr[1] = 0x80|((rune>>6)&0x3f);
+		keystr[2] = 0x80|((rune>>0)&0x3f);
+		keystr[3] = '\0';
+		len = 3;
 	} else if(rune <= 0x1fffff){
-		utf8key[0] = 0xf0|((rune>>18)&0x07);
-		utf8key[1] = 0x80|((rune>>12)&0x3f);
-		utf8key[2] = 0x80|((rune>>6)&0x3f);
-		utf8key[3] = 0x80|((rune>>0)&0x3f);
-		utf8key[4] = '\0';
+		keystr[0] = 0xf0|((rune>>18)&0x07);
+		keystr[1] = 0x80|((rune>>12)&0x3f);
+		keystr[2] = 0x80|((rune>>6)&0x3f);
+		keystr[3] = 0x80|((rune>>0)&0x3f);
+		keystr[4] = '\0';
+		len = 4;
 	} else {
 		fprintf(stderr, "unicode U%x sequence out of supported range\n", rune); 
-		return NULL; /* fail */
+		return 0; /* fail */
 	}
-	return utf8key;
+	return len;
 }
 
 static int
@@ -162,31 +163,28 @@ drawinit(int w, int h)
 	return XConnectionNumber(display);
 }
 
-void
-drawflush(void)
+static void
+drawflush(Rect r)
 {
-	if(flushing){
-		needflush = 1;
-	} else {
-		if((uchar *)shmimage->data != framebuffer)
-			;
-		XShmPutImage(display, window, DefaultGC(display, 0), shmimage, 0, 0, 0, 0, width, height, True);
-		flushing = 1;
-		needflush = 0;
-	}
+	if((uchar *)shmimage->data != framebuffer)
+		;
+	XShmPutImage(
+		display, window, DefaultGC(display, 0),
+		shmimage,
+		r.u0, r.v0,
+		r.u0, r.v0, durect(&r), dvrect(&r),
+		True // generate completion event
+	);
+	//fprintf(stderr, "flushed\n");
 }
 
-void
-drawreq(void)
-{
-	needflush = 1;
-}
-
+/*
 int
 drawbusy(void)
 {
 	return flushing;
 }
+*/
 
 Input *
 getinputs(Input **ep)
@@ -201,23 +199,25 @@ void
 addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
 {
 	Input *inp;
+
 	if(ninputs >= ainputs){
 		ainputs += ainputs >= 64 ? ainputs : 64;
 		inputs = realloc(inputs, ainputs * sizeof inputs[0]);
 	}
 	inp = inputs + ninputs;
 	ninputs++;
+
 	memset(inp, 0, sizeof inp[0]);
 	inp->on = input_prevmod;
-
 	if(utf8key != NULL){
 		strncpy(inp->str, utf8key, sizeof(inp->str)-1);
 		inp->str[sizeof(inp->str)-1] = '\0';
 		if(isbegin)
-			inp->begin = KeyUtf8;
+			inp->begin = KeyStr;
 		else
-			inp->end = KeyUtf8;
+			inp->end = KeyStr;
 	}
+
 	if(mod != 0){
 		if(isbegin){
 			inp->begin = mod;
@@ -237,29 +237,33 @@ addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
 	}
 }
 
-
-int
-drawhandle(int fd, int block)
+/*
+ *	drawevents2 calls flush to display anything that was drawn.
+ */
+static Input *
+drawevents2(int block, Input **inepp)
 {
-	static int hold_inputs;
+	static int flushing;
 	int redraw;
-	if(fd != XConnectionNumber(display)){
-		fprintf(stderr, "x11handle: passed fd does not match display\n");
-		return -1;
-	}
+
 	redraw = 0;
-	if(!hold_inputs)
+
+	if(!flushing){
+		if(screen.dirty){
+			drawflush(screen.r);
+			flushing = 1;
+			screen.dirty = 0;
+		}
 		ninputs = 0;
-	while(block || XPending(display)){
+	}
+	while((block && (flushing || ninputs == 0)) || XPending(display)){
 		XEvent ev;
-		block = 0;
 		XNextEvent(display, &ev);
 		switch(ev.type){
 		case MapNotify:
 		case ReparentNotify:
 			continue;
 		case Expose:
-			redraw = 1;
 			continue;
 		case KeyPress:
 		case KeyRelease:
@@ -278,15 +282,18 @@ drawhandle(int fd, int block)
 				);
 
 				KeySym keysym;
+				char keystr[8] = {0};
 				keysym = XKeycodeToKeysym(display, ep->keycode, 0);
-
+				utf8_keysym(keystr, sizeof keystr-1, keysym);
 				u64int mod;
 				switch(keysym){
 				case XK_Return:
 				case XK_KP_Enter:
+					strncpy(keystr, "\n", sizeof keystr-1);
 					mod = KeyEnter;
 					break;
 				case XK_Tab:
+					strncpy(keystr, "\t", sizeof keystr-1);
 					mod = KeyTab;
 					break;
 				case XK_Break:
@@ -358,12 +365,11 @@ drawhandle(int fd, int block)
 
 				addinput(
 					0, 0,
-					utf8_keysym(keysym),
+					keystr,
 					mod,
 					ev.type == KeyPress,
 					ev.type == KeyRelease
 				);
-				redraw = 1;
 			}
 			continue;
 		case ButtonPress:
@@ -389,7 +395,6 @@ drawhandle(int fd, int block)
 						ev.type == ButtonPress,
 						ev.type == ButtonRelease
 					);
-					redraw = 1;
 				}
 			}
 			continue;	
@@ -424,7 +429,6 @@ drawhandle(int fd, int block)
 						0,0
 					);
 				}
-				redraw = 1;
 			}
 			continue;
 		case ConfigureNotify:
@@ -435,38 +439,36 @@ drawhandle(int fd, int block)
 					width = ce->width;
 					height = ce->height;
 					if(shminit() == -1)
-						return -1;
-					redraw = 1;
+						return NULL;
 				}
 				continue;
 			}
 		}
 		if(ev.type == XShmGetEventBase(display) + ShmCompletion){
 			flushing = 0;
-			if(needflush){
-				hold_inputs = 0;
-				redraw = 1;
-			}
 			continue;
 		}
 		fprintf(stderr, "unknown xevent %d\n", ev.type);
 	}
-	if(flushing){
-		needflush = redraw;
-		hold_inputs = 1;
-		return 0;
+
+	if(!flushing && ninputs > 0){
+		*inepp = inputs+ninputs;
+		return inputs;
 	}
-	hold_inputs = 0;
-	return redraw;
+
+	return NULL;
 }
 
-int
-drawhalt(void)
+Input *
+drawevents(Input **inepp)
 {
-	drawflush();
-	while((drawhandle(XConnectionNumber(display), 1) & 4) == 0)
-		;
-	return 0;
+	return drawevents2(1, inepp);
+}
+
+Input *
+drawevents_nonblock(Input **inepp)
+{
+	return drawevents2(0, inepp);
 }
 
 int

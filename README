@@ -15,18 +15,13 @@ Libdraw3 supports two kinds of objects
 		- the usual perspective corrected interpolation jazz
 
 Libdraw3 only supports buffered operation
+	- nothing to worry about in blocking mode
 	- ask for an image
 	- draw to it
 	- give it to display
 
 Libdraw3 supports window resizing
 	- the new image you get happens to be of a different size
-	
-Libdraw3 is inspired by the observation that what graphics acceleration does well is triangles
-	- a function is called per vertex (a vertex shader)
-	- a function is called per pixel (a pixel shader)
-	- values passed per vertex are hyperbolically interpolated in the pixel realm
-	- the pixel realm can access textures based on any of its interpolated values
 
 Libdraw3 is friendly for generating debug graphics, instead of printf
 	- really nice for some classes of problems

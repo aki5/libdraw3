@@ -165,7 +165,7 @@ retry:
 		if(ori2i(a, b, c) > 0 && polyinside(pt, poly, next, next[nni], npoly-3, a, b, c) == 0){
 			if(0 || bugger){
 				fprintf(stderr, "halting\n");
-				drawhalt();
+				//drawhalt();
 				fprintf(stderr, "halt done\n");
 				idx2color(ci, col);
 				ci++;

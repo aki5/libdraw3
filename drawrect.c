@@ -9,6 +9,7 @@ drawrect(Image *img, Rect r, uchar *color)
 
 	cliprect(&r, img->r);
 
+	img->dirty = 1;
 	cval = *(u32int*)color;
 	for(v = r.v0; v < r.vend; v++){
 		for(u = r.u0; u < r.uend; u++){
