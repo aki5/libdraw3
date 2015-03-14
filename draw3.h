@@ -33,9 +33,7 @@ enum {
 typedef struct Rect Rect;
 typedef struct Image Image;
 typedef struct Input Input;
-typedef struct DFont DFont;
-typedef struct DGlyph DGlyph;
-typedef struct DFontImpl DFontImpl;
+
 
 struct Rect {
 	int u0;
@@ -59,21 +57,6 @@ struct Input {
 	u64int on;
 	u64int end;
 	char str[5];
-};
-
-struct DFont {
-	Image *atlas;
-	DGlyph *glyps;
-	int nglyps;
-	int aglyps;
-	DFontImpl *_internal;
-};
-
-struct DGlyph {
-	int code;
-	Rect r;
-	short yoff;
-	short adv;
 };
 
 static inline int
@@ -119,9 +102,9 @@ rectisect(Rect a, Rect b)
 	return a.u0 < b.uend && b.u0 < a.uend && a.v0 < b.vend && b.v0 < a.vend;
 }
 
-static inline int durect(Rect *r){ return r->uend-r->u0; }
-static inline int dvrect(Rect *r){ return r->vend-r->v0; }
-static inline int rectmidpt(Rect *r, short *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
+static inline int rectw(Rect *r){ return r->uend-r->u0; }
+static inline int recth(Rect *r){ return r->vend-r->v0; }
+static inline void rectmidpt(Rect *r, short *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
 
 #define pt(a, b) (short[]){a, b}
 #define rect(a, b, c, d) (Rect){.u0=a, .v0=b, .uend=c, .vend=d}

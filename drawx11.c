@@ -15,8 +15,8 @@
 void
 ndc2rect(Rect *r, float x, float y, int *u, int *v)
 {
-	*u = 1.0f + 0.5f*x*(durect(r)-1);
-	*v = 1.0f - 0.5f*y*(dvrect(r)-1);
+	*u = 1.0f + 0.5f*x*(rectw(r)-1);
+	*v = 1.0f - 0.5f*y*(recth(r)-1);
 }
 
 static Display *display;
@@ -172,7 +172,7 @@ drawflush(Rect r)
 		display, window, DefaultGC(display, 0),
 		shmimage,
 		r.u0, r.v0,
-		r.u0, r.v0, durect(&r), dvrect(&r),
+		r.u0, r.v0, rectw(&r), recth(&r),
 		True // generate completion event
 	);
 	//fprintf(stderr, "flushed\n");
