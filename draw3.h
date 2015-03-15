@@ -115,8 +115,33 @@ extern int ninputs;
 
 extern Image screen;
 
-#define mousebegin(p) (((p)->begin & AnyMouse) != 0)
-#define keybegin(p) (((p)->begin & DAnyKey) != 0)
+static inline int
+mousebegin(Input *inp)
+{
+	if((inp->begin & AnyMouse) != 0)
+		return inp->mouse;
+	return -1;
+}
+
+static inline int
+mouseend(Input *inp)
+{
+	if((inp->end & AnyMouse) != 0)
+		return inp->mouse;
+	return -1;
+}
+
+static inline int
+mousemove(Input *inp)
+{
+	return inp->mouse;
+}
+
+static inline int
+keystr(Input *inp, char *str)
+{
+	return ((inp->begin & KeyStr) != 0 && !strcmp(inp->str, str));
+}
 
 int drawinit(int w, int h);
 Input *drawevents(Input **inepp);

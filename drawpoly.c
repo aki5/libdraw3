@@ -48,7 +48,7 @@ idx2color(int idx, uchar *color)
 {
 	int i;
 	int r, g, b;
-idx += 1;
+idx += 9;
 	r = 0;
 	g = 0;
 	b = 0;

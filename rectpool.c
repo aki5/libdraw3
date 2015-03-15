@@ -17,15 +17,13 @@ addcol(Rectrow *row, short u0, short w)
 	int i;
 
 	if(row->ncols == row->acols){
-		row->acols += 32;
+		row->acols += 8;
 		row->cols = realloc(row->cols, row->acols * sizeof row->cols[0]);
 	}
 	for(i = row->ncols; i > 0; i--){
 		if(row->cols[i-1].u0 < u0)
 			break;
-		fprintf(stderr, "cols[%d]:%d >= u0:%d\n", i-1, row->cols[i-1].u0, u0);
 	}
-fprintf(stderr, "i landed on cols[%d]:%d, u0:%d\n", i, row->cols[i].u0, u0);
 	if(i < row->ncols)
 		memmove(row->cols+i+1, row->cols+i, (row->ncols-i) * sizeof row->cols[0]);
 	row->ncols++;
@@ -42,7 +40,7 @@ addrow(Rectpool *rpool, short v0, short h)
 	int i;
 
 	if(rpool->nrows == rpool->arows){
-		rpool->arows += 32;
+		rpool->arows += 8;
 		rpool->rows = realloc(rpool->rows, rpool->arows * sizeof rpool->rows[0]);
 	}
 
@@ -78,25 +76,65 @@ getsegr(short *segr, int nsegr, int val)
 }
 
 void
-initrectpool(Rectpool *rpool, Rect r) //, short *wsegr, short *hsegr, int nsegr)
+rectpool_bestfit(Rectpool *rpool, int bestfit)
+{
+	rpool->bestfit = bestfit;
+}
+
+void
+rectpool_setsegr(Rectpool *rpool, short *segr, int nsegr)
+{
+	int i;
+	nsegr = nsegr < rpool->asegr ? nsegr : rpool->asegr;
+	for(i = 0; i < nsegr; i++)
+		rpool->segr[i] = segr[i];
+	rpool->nsegr = nsegr;
+}
+
+void
+rectpool_harmonic(Rectpool *rpool, int max, int n)
+{
+	int i, j;
+	short tmp;
+	j = 0;
+	for(i = 0; i < n; i++){
+		tmp = max/(n-i);
+		rpool->segr[j] = tmp > 1 ? tmp : 1;
+		if(j == 0 || rpool->segr[j-1] !=  rpool->segr[j])
+			j++;
+	}
+	rpool->nsegr = j;
+	for(i = 0; i < rpool->nsegr; i++){
+		fprintf(stderr, "harmonic segr[%d] = %d\n", i, rpool->segr[i]);
+	}
+}
+
+
+void
+initrectpool(Rectpool *rpool, Rect r)
 {
 	int i;
 	Rectrow *row;
-	short *segr, s;
+	short *segr, s, tmp;
+	int sum;
 
 	memset(rpool, 0, sizeof rpool[0]);
-	segr = malloc(30 * sizeof segr[0]);
-	s = 6;
-	for(i = 0; i < 30; i++){
-fprintf(stderr, "segr[%d]=%d\n", i, s);
+	segr = malloc(32 * sizeof segr[0]);
+	s = 1;
+	sum = 0;
+	for(i = 0; i < 32; i++){
+		sum += s;
 		segr[i] = s;
-		s = s*13/10;
-		if(s >= recth(&r)/2)
+		tmp = s*12/10;
+		s = tmp > s ? tmp : s+1;
+		if(sum >= recth(&r))
 			break;
 	}
-	rpool->wsegr = segr;
-	rpool->hsegr = segr;
-	rpool->nsegr = i;
+fprintf(stderr, "sum = %d, i = %d, s = %d\n", sum, i-1, segr[i-1]);
+	rpool->segr = segr;
+	rpool->asegr = 32;
+	rpool->nsegr = i-1;
+	rpool->bestfit = 3;
 
 	rpool->r = r;
 	row = addrow(rpool, r.v0, recth(&r));
@@ -113,23 +151,6 @@ freerectpool(Rectpool *rpool)
 	memset(rpool, 0, sizeof rpool[0]);
 }
 
-void
-dumprows(Rectpool *rpool)
-{
-	Rectrow *row;
-	Rectcol *col;
-	int i, j;
-	for(i = 0; i < rpool->nrows; i++){
-		row = rpool->rows + i;
-fprintf(stderr, "row[%d]=%d,%d", i, row->v0, row->v0+row->h);
-		col = row->cols;
-		for(j = 0; j < row->ncols; j++){
-fprintf(stderr, " col[%d]=%d,%d", j, col[j].u0, col[j].u0+col[j].w);
-		}
-fprintf(stderr, "\n");
-	}
-}
-
 int
 rectalloc(Rectpool *rpool, int w, int h, Rect *rp)
 {
@@ -141,8 +162,12 @@ rectalloc(Rectpool *rpool, int w, int h, Rect *rp)
 	if(w <= 0 || h <= 0)
 		return -1;
 
-	wsegr = getsegr(rpool->wsegr, rpool->nsegr, w);
-	hsegr = getsegr(rpool->hsegr, rpool->nsegr, h);
+	if((rpool->bestfit & 2) == 0)
+		wsegr = getsegr(rpool->segr, rpool->nsegr, w);
+	else
+		wsegr = w;
+
+	hsegr = getsegr(rpool->segr, rpool->nsegr, h);
 
 	/* try exact height */
 	for(i = 0; i < rpool->nrows; i++){
@@ -159,22 +184,19 @@ rectalloc(Rectpool *rpool, int w, int h, Rect *rp)
 						memmove(row->cols+j, row->cols+j+1, (row->ncols-j-1) * sizeof row->cols[0]);
 						row->ncols--;
 					}
-					dumprows(rpool);
 					return 0;
 				}
 			}
 		}
 	}
+
 	/* no exact height, split a new one off of a bigger but empty one */
 	for(i = 0; i < rpool->nrows; i++){
 		row = rpool->rows + i;
-
 		if(row->h > hsegr && rowunused(rpool, row)){
 			addrow(rpool, row->v0+hsegr, row->h-hsegr);
-
 			row = rpool->rows + i;
 			row->h = hsegr;
-
 			col = row->cols;
 			if(col->w >= wsegr){
 				*rp = rect(col->u0, row->v0, col->u0+w, row->v0+h);
@@ -184,12 +206,13 @@ rectalloc(Rectpool *rpool, int w, int h, Rect *rp)
 					memmove(row->cols, row->cols+1, (row->ncols-1) * sizeof row->cols[0]);
 					row->ncols--;
 				}
-				dumprows(rpool);
 				return 0;
 			}
 		}
 	}
-	fprintf(stderr, "rectalloc: desperation for %d,%d\n", wsegr, hsegr);
+
+	if((rpool->bestfit & 1) == 0)
+		return -1;
 	/* final resort: best fit */
 	int minh = -1, minhi = -1;
 	for(i = 0; i < rpool->nrows; i++){
@@ -217,14 +240,11 @@ rectalloc(Rectpool *rpool, int w, int h, Rect *rp)
 					memmove(row->cols+j, row->cols+j+1, (row->ncols-j-1) * sizeof row->cols[0]);
 					row->ncols--;
 				}
-				dumprows(rpool);
 				return 0;
 			}
 		}
 	}
-	dumprows(rpool);
 
-	/* no luck */
 	return -1;
 }
 
@@ -237,9 +257,10 @@ rectfree(Rectpool *rpool, Rect r)
 	int segrw;
 	int i, j;
 
-	segrw = getsegr(rpool->wsegr, rpool->nsegr, rectw(&r));
-
-fprintf(stderr, "rectfree row %d, %d,%d\n", r.v0, rectw(&r), recth(&r));
+	if((rpool->bestfit & 2) == 0)
+		segrw = getsegr(rpool->segr, rpool->nsegr, rectw(&r));
+	else
+		segrw = rectw(&r);
 
 	for(i = 0; i < rpool->nrows; i++){
 		row = rpool->rows + i;
@@ -253,7 +274,6 @@ fprintf(stderr, "rectfree row %d, %d,%d\n", r.v0, rectw(&r), recth(&r));
 				/* try merge current col with the previous one */
 				col = row->cols;
 				if(col[j-1].u0+col[j-1].w == col[j].u0){
-fprintf(stderr, "col merge %d with %d\n", j-1, j);
 					col[j-1].w += col[j].w;
 					if(j < row->ncols-1)
 						memmove(col+j, col+j+1, (row->ncols-j-1) * sizeof col[0]);
@@ -262,21 +282,11 @@ fprintf(stderr, "col merge %d with %d\n", j-1, j);
 				}
 			}
 		}
-		for(j = 0; j < row->ncols; j++){
-			col = row->cols;
-			if(col[j].w == 0){
-				fprintf(stderr, "############ row[%d] col[%d] became 0!\n", i, j);
-dumprows(rpool);
-				abort();
-			}
-		}
-
 
 		/* try merge current row with the previous one */
 		row = rpool->rows;
 		if(i > 0 && rowunused(rpool, row+i) && rowunused(rpool, row+i-1)){
 			if(row[i-1].v0+row[i-1].h == row[i].v0){
-fprintf(stderr, "row merge %d with %d\n", i-1, i);
 				row[i-1].h += row[i].h;
 				if(i < rpool->nrows-1)
 					memmove(row+i, row+i+1, (rpool->nrows-i-1) * sizeof row[0]);
@@ -284,8 +294,5 @@ fprintf(stderr, "row merge %d with %d\n", i-1, i);
 				i--; 
 			}
 		}
-
 	}
-dumprows(rpool);
-
 }
