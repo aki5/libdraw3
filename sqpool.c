@@ -15,8 +15,6 @@ struct Sqnode {
 };
 
 struct Sqcent {
-	Sqcent *next;
-	Sqcent *prev;
 	int rank;
 	Sqnode nodes[1];
 };
@@ -34,6 +32,14 @@ fib(int n)
 	return b;
 }
 
+int
+centnode(Sqnode *node)
+{
+	if(node->cent != NULL && node->cent->nodes == node)
+		return 1;
+	return 0;
+}
+
 Sqnode *
 centloop0(Sqcent *cent)
 {
@@ -46,53 +52,29 @@ centloop1(Sqcent *cent)
 	return cent->rank > 0 ? cent->nodes+1 + cent->rank : cent->nodes;
 }
 
-int uoff = 320;
-int voff = 200;
+int uoff = 0;
+int voff = 0;
 
 void
-drawcent(Sqcent *cent)
+drawnodes(Sqnode *node, Sqnode *end)
 {
-	Sqnode *np;
 	uchar color[4];
 	int fibcur;
 
-	for(; cent != NULL; cent = cent->next){
-		np = cent->nodes;
-		printf("cent rank %d\n", cent->rank);
-		fibcur = fib(np->rank);
+	if(node == NULL)
+		return;
 
-		for(np = centloop0(cent); np != cent->nodes; np = np->next){
-			fibcur = fib(np->rank);
-			idx2color(np->rank, color);
-			printf(
-				"	loop0 rank %d (%d,%d) dir %d fibcur %d\n",
-				np->rank, np->u0, np->v0, np->dir, fibcur
-			);
-			drawrect(
-				&screen,
-				rect(np->u0+uoff, np->v0+voff, np->u0+fibcur+uoff, np->v0+fibcur+voff),
-				color
-			);
+	for(; node != end; node = node->next){
+		if(centnode(node)){
+			drawnodes(centloop0(node->cent), node);
+			drawnodes(centloop1(node->cent), node);
 		}
-		for(np = centloop1(cent); np != cent->nodes; np = np->next){
-			fibcur = fib(np->rank);
-			idx2color(np->rank, color);
-			printf(
-				"	loop1 rank %d (%d,%d) dir %d fibcur %d\n",
-				np->rank, np->u0, np->v0, np->dir, fibcur
-			);
-			drawrect(
-				&screen,
-				rect(np->u0+uoff, np->v0+voff, np->u0+fibcur+uoff, np->v0+fibcur+voff),
-				color
-			);
-		}
-		np = cent->nodes;
-		fibcur = fib(np->rank);
-		idx2color(np->rank, color);
+
+		fibcur = fib(node->rank);
+		idx2color(node->rank, color);
 		drawrect(
 			&screen,
-			rect(np->u0+uoff, np->v0+voff, np->u0+fibcur+uoff, np->v0+fibcur+voff),
+			rect(node->u0+uoff, node->v0+voff, node->u0+fibcur+uoff, node->v0+fibcur+voff),
 			color
 		);
 	}
@@ -103,7 +85,7 @@ newcent(int rank, short u0, short v0)
 {
 	Sqcent *cent;
 	Sqnode *np, *ep;
-	int a, b, t, i;
+	int i;
 	short u0topleft, v0topleft;
 	short fibcur, fibprev;
 
@@ -115,6 +97,7 @@ newcent(int rank, short u0, short v0)
 	cent->rank = rank;
 	np = cent->nodes;
 	np->rank = rank;
+	np->cent = cent;
 	np->u0 = u0;
 	np->v0 = v0;
 
@@ -133,7 +116,7 @@ newcent(int rank, short u0, short v0)
 	np = cent->nodes+1 + 2*(rank) - 1;
 	np->next = cent->nodes;
 
-	/* u0, v0 trace the outer corner pixels. we start by going up (dir=3) */
+	/*  trace the outer corners counter-clockwise. we start by going up (dir=3) */
 	u0 = cent->nodes[0].u0 + fib(rank)-1;
 	v0 = cent->nodes[0].v0 - fib(rank-1);
 	u0topleft = -(fib(rank-1)-1);
@@ -170,7 +153,7 @@ newcent(int rank, short u0, short v0)
 		}
 	}
 
-	/* u0, v0 trace the outer corner pixels. we start by going left (dir=3) */
+	/* trace the outer corners clockwise. start by going left (dir=3) */
 	u0 = cent->nodes[0].u0 - fib(rank-1);
 	v0 = cent->nodes[0].v0 + fib(rank)-1;
 	u0topleft = 0;
@@ -210,86 +193,76 @@ newcent(int rank, short u0, short v0)
 	return cent;
 }
 
-Sqcent *
-rootcent(int rank, short u0, short v0)
+Sqnode *
+rootnode(int rank, short u0, short v0)
 {
-	Sqcent *cent;
-	cent = newcent(0, u0, v0);
-	cent->rank = 0;
-	cent->nodes[0].rank = rank;
-	return cent;
+	Sqnode *np;
+	np = malloc(sizeof np[0]);
+	memset(np, 0, sizeof np[0]);
+	np->rank = rank;
+	np->u0 = u0;
+	np->v0 = v0;
+	return np;
 }
 
-Sqcent *
-divcent(Sqcent *cent)
+void
+divnode(Sqnode *np)
 {
 	Sqcent *ncent;
-	Sqnode *np;
 	int rank;
 
-	np = cent->nodes;
 	rank = np->rank;
 	if(rank < 2)
-		return NULL;
-
+		return;
 	ncent = newcent(rank-1, np->u0 + fib(rank-2), np->v0 + fib(rank-2));
-	ncent->next = cent->next;
-	ncent->prev = cent;
-	cent->next = ncent;
-	cent->nodes[0].rank -= 2;
+	ncent->nodes[0].next = np->next;
+	np->next = ncent->nodes;
+	np->rank -= 2;
 
-	return cent;
+	return;
 }
 
 int
 main(void)
 {
-	int i, t;
+	int t;
 	int mouseid, drag = 0;
 	int dragx, dragy;
 	uchar black[4] = {0,0,0,255};
+	Sqnode *root;
+	int rank;
 
-	drawinit(uoff + 8*uoff/5, voff + 8*voff/5);
-	for(i = 0; i < 7; i++){
-		Sqcent *cent;
-		if((cent = newcent(i, 0, 0)) != NULL){
-			drawcent(cent);
-			free(cent);
-		}
-	}
+	rank = 15;
+	drawinit(fib(rank), fib(rank));
+	root = rootnode(rank, 0, 0);
+
 	for(;;){
 		Input *inp, *inep;
 		if((inp = drawevents(&inep)) != NULL){
 			for(; inp < inep; inp++){
 				if(keystr(inp, "q"))
 					exit(0);
+				if(keystr(inp, "d"))
+					divnode(root);
+
 				if(!drag && (t = mousebegin(inp)) != -1){
 					mouseid = t;
-fprintf(stderr, "ding, mousebegin %d\n", mouseid);
 					dragx = inp->xy[0];
 					dragy = inp->xy[1];
 					drag = 1;
 				}
 				if(drag && mousemove(inp) == mouseid){
-fprintf(stderr, "move, mouseid %d\n", mouseid);
 					uoff += inp->xy[0] - dragx;
 					voff += inp->xy[1] - dragy;
 					dragx = inp->xy[0];
 					dragy = inp->xy[1];
-					if(mouseend(inp) == mouseid){
-fprintf(stderr, "dong, mouseid %d\n", mouseid);
+					if(mouseend(inp) == mouseid)
 						drag = 0;
-					}
 				}
 			}
-			Sqcent *cent, *cp;
+
 			drawrect(&screen, screen.r, black);
-			if((cent = rootcent(13, 0, 0)) != NULL){
-				for(cp = cent; cp != NULL; cp = cp->next)
-					divcent(cp);
-				drawcent(cent);
-				free(cent);
-			}
+			drawnodes(root, NULL);
 		}
 	}
 	return 0;
