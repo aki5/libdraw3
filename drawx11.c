@@ -28,6 +28,7 @@ static XShmSegmentInfo shminfo;
 Input *inputs;
 int ninputs;
 static int ainputs;
+static int animating;
 
 static int width;
 static int height;
@@ -178,6 +179,12 @@ drawflush(Rect r)
 	//fprintf(stderr, "flushed\n");
 }
 
+void
+drawanimate(int flag)
+{
+	animating = flag;
+}
+
 /*
 int
 drawbusy(void)
@@ -194,6 +201,20 @@ getinputs(Input **ep)
 }
 
 static int input_prevmod;
+
+void
+addredraw(void)
+{
+	Input *inp;
+	if(ninputs >= ainputs){
+		ainputs += ainputs >= 64 ? ainputs : 64;
+		inputs = realloc(inputs, ainputs * sizeof inputs[0]);
+	}
+	inp = inputs + ninputs;
+	ninputs++;
+	memset(inp, 0, sizeof inp[0]);
+	inp->mouse = -1;
+}
 
 void
 addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
@@ -234,6 +255,8 @@ addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
 		inp->mouse = mod & AnyMouse;
 		inp->xy[0] = x;
 		inp->xy[1] = y;
+	} else {
+		inp->mouse = -1;
 	}
 }
 
@@ -262,8 +285,10 @@ drawevents2(int block, Input **inepp)
 		switch(ev.type){
 		case MapNotify:
 		case ReparentNotify:
+			addredraw();
 			continue;
 		case Expose:
+			addredraw();
 			continue;
 		case KeyPress:
 		case KeyRelease:
@@ -362,7 +387,7 @@ drawevents2(int block, Input **inepp)
 					mod = 0;
 					break;
 				}
-
+fprintf(stderr, "drawx11 keystr '%s'\n", keystr);
 				addinput(
 					0, 0,
 					keystr,
@@ -440,12 +465,15 @@ drawevents2(int block, Input **inepp)
 					height = ce->height;
 					if(shminit() == -1)
 						return NULL;
+					addredraw();
 				}
 				continue;
 			}
 		}
 		if(ev.type == XShmGetEventBase(display) + ShmCompletion){
 			flushing = 0;
+			if(animating)
+				addredraw();
 			continue;
 		}
 		fprintf(stderr, "unknown xevent %d\n", ev.type);

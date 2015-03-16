@@ -158,6 +158,8 @@ int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly,
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
 
+void drawanimate(int flag);
+
 static inline void
 drawpixel(Image *img, short *pt, uchar *color)
 {
