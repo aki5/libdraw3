@@ -2,12 +2,20 @@
 #include "os.h"
 #include "draw3.h"
 
+typedef struct Sqpool Sqpool;
 typedef struct Sqcent Sqcent;
 typedef struct Sqnode Sqnode;
+
+struct Sqpool {
+	Sqnode *root;
+	Sqnode *used[64];
+	Sqnode *free[64];
+};
 
 struct Sqnode {
 	Sqcent *cent;
 	Sqnode *next;
+	Sqnode *lnext;
 	int u0;
 	int v0;
 	int rank;
@@ -18,6 +26,10 @@ struct Sqcent {
 	int rank;
 	Sqnode nodes[1];
 };
+
+void sqfree(Sqpool *p, Sqnode *np);
+Sqnode *sqalloc(Sqpool *p, int w);
+void sqinit(Sqpool *p, int rank);
 
 int
 fib(int n)
@@ -32,10 +44,24 @@ fib(int n)
 	return b;
 }
 
+
+int
+rankfor(int n)
+{
+	int i, a, b, t;
+	a = 0; b = 1;
+	for(i = 0; b < n; i++){
+		t = a+b;
+		a = b;
+		b = t;
+	}
+	return i;
+}
+
 int
 centnode(Sqnode *node)
 {
-	if(node->cent != NULL && node->cent->nodes == node)
+	if(node != NULL && node->cent != NULL && node->cent->nodes == node)
 		return 1;
 	return 0;
 }
@@ -78,6 +104,39 @@ drawnodes(Sqnode *node, Sqnode *end)
 			color
 		);
 	}
+}
+
+int
+drawlist(Sqnode *np, int u0, int v0, int d)
+{
+	int u, v, i;
+	uchar color[4];
+	u = u0;
+	v = v0;
+	i = 1;
+	for(; np != NULL; np = np->lnext, i++){
+		idx2color(np->rank, color);
+		drawrect(&screen, rect(u, v, u+d, v+d), color);
+		u += d+1;
+		if(i >= 100){
+			u = u0;
+			v += d+1;
+			i = 0;
+		}
+	}
+	return v+d+1;
+}
+
+void
+drawpool(Sqpool *pool)
+{
+	int i, d, u, v;
+	drawnodes(pool->root, NULL);
+	d = 3;
+	u = uoff-100*(d+1);
+	v = voff;
+	for(i = 0; i < nelem(pool->free); i++)
+		v = drawlist(pool->free[i], u, v, d);
 }
 
 Sqcent *
@@ -206,7 +265,7 @@ rootnode(int rank, short u0, short v0)
 }
 
 void
-divnode(Sqnode *np)
+divnode(Sqpool *pool, Sqnode *np)
 {
 	Sqcent *ncent;
 	int rank;
@@ -219,7 +278,73 @@ divnode(Sqnode *np)
 	np->next = ncent->nodes;
 	np->rank -= 2;
 
+	Sqnode *ep;
+	ep = ncent->nodes + 2*(rank-1)+1;
+	for(np = ncent->nodes; np < ep; np++)
+		sqfree(pool, np);
+
 	return;
+}
+
+void
+sqinit(Sqpool *p, int rank)
+{
+	Sqnode *np;
+	memset(p, 0, sizeof p[0]);
+	np = rootnode(rank, 0, 0);
+	p->free[rank] = np;
+	p->root = np;
+}
+
+Sqnode *
+sqalloc(Sqpool *pool, int w)
+{
+	Sqnode *np;
+	int i, wrank;
+
+	wrank = rankfor(w);
+	if(pool->free[wrank] == NULL){
+		if(wrank == 0 && pool->free[wrank+1] != NULL){
+			wrank++;
+			goto found;
+		}
+		for(i = wrank+1; i < nelem(pool->free); i++){
+			if(pool->free[i] != NULL){
+				np = pool->free[i];
+				pool->free[i] = np->lnext;
+				divnode(pool, np);
+				sqfree(pool, np);
+				break;
+			}
+		}
+	}
+found:
+	if((np = pool->free[wrank]) != NULL){
+		pool->free[wrank] = np->lnext;
+		np->lnext = NULL;
+		return np;
+	}
+	return NULL;
+}
+
+void
+sqfree(Sqpool *pool, Sqnode *np)
+{
+	int rank;
+	rank = np->rank; // > 1 ? np->rank : 0;
+	np->lnext = pool->free[rank];
+	pool->free[rank] = np;
+}
+
+double
+exprand(double x)
+{
+	double z;
+
+	do {
+		z = drand48();
+	} while(z == 0.0);
+	return -x * log(z);
 }
 
 int
@@ -229,13 +354,18 @@ main(void)
 	int mouseid, drag = 0;
 	int dragx, dragy;
 	uchar black[4] = {0,0,0,255};
-	Sqnode *root;
+
+	Sqpool sqpool;
 	int rank;
 
 	rank = 15;
-	drawinit(fib(rank), fib(rank));
-	root = rootnode(rank, 0, 0);
+	drawinit(5+100*4+fib(rank), fib(rank));
+	uoff = 5+100*4; //fib(rank);
+	//root = rootnode(rank, 0, 0);
 
+	sqinit(&sqpool, rank);
+	drawanimate(1);
+	srand48(3);
 	for(;;){
 		Input *inp, *inep;
 		if((inp = drawevents(&inep)) != NULL){
@@ -243,7 +373,16 @@ main(void)
 				if(keystr(inp, "q"))
 					exit(0);
 				if(keystr(inp, "d"))
-					divnode(root);
+					divnode(&sqpool, sqpool.root);
+				//if(keystr(inp, "a"))
+				int i;
+				for(i = 0; i < 1; i++){
+					double er;
+					er = exprand(1.0);
+					er = er > 1.0 ? er : 1.0;
+					//er = er < 256.0 ? er : 256.0;
+					sqalloc(&sqpool, (int)er);
+				}
 
 				if(!drag && (t = mousebegin(inp)) != -1){
 					mouseid = t;
@@ -262,7 +401,8 @@ main(void)
 			}
 
 			drawrect(&screen, screen.r, black);
-			drawnodes(root, NULL);
+			drawpool(&sqpool);
+//			drawnodes(sqpool.root, NULL);
 		}
 	}
 	return 0;
