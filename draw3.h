@@ -6,8 +6,9 @@ enum {
 	AnyMouse = (LastMouse<<1)-Mouse0,
 	DAnyKey = ~AnyMouse, // X11 defines AnyKey, so we can not.
 
-	KeyStr = 1<<11,
+	KeyStr = 1<<10,
 
+	KeyCapsLock = 1<<11,
 	KeyAlt = 1<<12,
 	KeyBackSpace = 1<<13,
 	KeyBreak = 1<<14,
@@ -142,6 +143,19 @@ keystr(Input *inp, char *str)
 {
 	return ((inp->begin & KeyStr) != 0 && !strcmp(inp->str, str));
 }
+
+static inline int
+keypress(Input *inp, int mask)
+{
+	return (inp->begin & mask) != 0;
+}
+
+static inline int
+keyend(Input *inp, int mask)
+{
+	return (inp->end & mask) != 0;
+}
+
 
 int drawinit(int w, int h);
 Input *drawevents(Input **inepp);

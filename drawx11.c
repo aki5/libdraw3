@@ -308,7 +308,9 @@ drawevents2(int block, Input **inepp)
 
 				KeySym keysym;
 				char keystr[8] = {0};
-				keysym = XKeycodeToKeysym(display, ep->keycode, 0);
+
+				keysym = XLookupKeysym(ep, ep->state & (ShiftMask|LockMask));
+//				keysym = XKeycodeToKeysym(display, ep->keycode, 0);
 				utf8_keysym(keystr, sizeof keystr-1, keysym);
 				u64int mod;
 				switch(keysym){
@@ -383,11 +385,17 @@ drawevents2(int block, Input **inepp)
 				case XK_Delete:
 					mod = KeyDel;
 					break;
+				case XK_Caps_Lock:
+					mod = KeyCapsLock;
+fprintf(stderr, "capslock!\n");
+					break;
 				default:
 					mod = 0;
 					break;
 				}
-fprintf(stderr, "drawx11 keystr '%s'\n", keystr);
+fprintf(stderr, "drawx11 keystr '%s'\n",
+keystr
+);
 				addinput(
 					0, 0,
 					keystr,
@@ -472,8 +480,10 @@ fprintf(stderr, "drawx11 keystr '%s'\n", keystr);
 		}
 		if(ev.type == XShmGetEventBase(display) + ShmCompletion){
 			flushing = 0;
-			if(animating)
+			if(animating){
+				usleep(10000);
 				addredraw();
+			}
 			continue;
 		}
 		fprintf(stderr, "unknown xevent %d\n", ev.type);
