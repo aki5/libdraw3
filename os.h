@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h> // memcpy
 #include <math.h>
+#include <ctype.h>
 #include <sys/time.h>
 
 typedef unsigned char uchar;
