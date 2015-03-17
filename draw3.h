@@ -6,6 +6,7 @@ enum {
 	AnyMouse = (LastMouse<<1)-Mouse0,
 	DAnyKey = ~AnyMouse, // X11 defines AnyKey, so we can not.
 
+	Animate = 1<<9,
 	KeyStr = 1<<10,
 
 	KeyCapsLock = 1<<11,
@@ -84,17 +85,18 @@ ptinellipse(short *uv, short *c, short *d, int rad)
 	return (mag1+mag2) <= 2*rad*rad;
 }
 
-static inline void
-cliprect(Rect *r, Rect cr)
+static inline Rect
+cliprect(Rect r, Rect cr)
 {
-	if(r->u0 < cr.u0)
-		r->u0 = cr.u0;
-	if(r->v0 < cr.v0)
-		r->v0 = cr.v0;
-	if(r->uend > cr.uend)
-		r->uend = cr.uend;
-	if(r->vend > cr.vend)
-		r->vend = cr.vend;
+	if(r.u0 < cr.u0)
+		r.u0 = cr.u0;
+	if(r.v0 < cr.v0)
+		r.v0 = cr.v0;
+	if(r.uend > cr.uend)
+		r.uend = cr.uend;
+	if(r.vend > cr.vend)
+		r.vend = cr.vend;
+	return r;
 }
 
 static inline int
@@ -156,6 +158,12 @@ keyend(Input *inp, int mask)
 	return (inp->end & mask) != 0;
 }
 
+static inline int
+animate(Input *inp)
+{
+	return (inp->begin & Animate) != 0;
+}
+
 
 int drawinit(int w, int h);
 Input *drawevents(Input **inepp);
@@ -173,6 +181,11 @@ void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int
 void drawrect(Image *img, Rect r, uchar *color);
 
 void drawanimate(int flag);
+void loadimage8(Image *img, Rect clipr, uchar *data, int stride);
+void loadimage24(Image *img, Rect clipr, uchar *data, int stride);
+
+void initdrawstr(char *path);
+void drawstr(Image *img, Rect r, char *str, int len);
 
 static inline void
 drawpixel(Image *img, short *pt, uchar *color)

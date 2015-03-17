@@ -47,21 +47,25 @@ utf8_keysym(char *keystr, int cap, KeySym key)
 	if((rune = keysym2ucs(key)) == -1)
 		return 0;
 	if(rune <= 0x7f){
+		if(cap < 2) return 0;
 		keystr[0] = rune;
 		keystr[1] = '\0';
 		len = 1;
 	} else if(rune <= 0x7ff){
+		if(cap < 3) return 0;
 		keystr[0] = 0xc0|((rune>>6)&0x1f);
 		keystr[1] = 0x80|((rune>>0)&0x3f);
 		keystr[2] = '\0';
 		len = 2;
 	} else if(rune <= 0xfff){
+		if(cap < 4) return 0;
 		keystr[0] = 0xe0|((rune>>12)&0x0f);
 		keystr[1] = 0x80|((rune>>6)&0x3f);
 		keystr[2] = 0x80|((rune>>0)&0x3f);
 		keystr[3] = '\0';
 		len = 3;
 	} else if(rune <= 0x1fffff){
+		if(cap < 5) return 0;
 		keystr[0] = 0xf0|((rune>>18)&0x07);
 		keystr[1] = 0x80|((rune>>12)&0x3f);
 		keystr[2] = 0x80|((rune>>6)&0x3f);
@@ -69,7 +73,7 @@ utf8_keysym(char *keystr, int cap, KeySym key)
 		keystr[4] = '\0';
 		len = 4;
 	} else {
-		fprintf(stderr, "unicode U%x sequence out of supported range\n", rune); 
+		fprintf(stderr, "unicode U%lx sequence out of supported range\n", rune); 
 		return 0; /* fail */
 	}
 	return len;
@@ -167,8 +171,6 @@ drawinit(int w, int h)
 static void
 drawflush(Rect r)
 {
-	if((uchar *)shmimage->data != framebuffer)
-		;
 	XShmPutImage(
 		display, window, DefaultGC(display, 0),
 		shmimage,
@@ -214,6 +216,7 @@ addredraw(void)
 	ninputs++;
 	memset(inp, 0, sizeof inp[0]);
 	inp->mouse = -1;
+	inp->begin = Animate;
 }
 
 void
@@ -267,9 +270,6 @@ static Input *
 drawevents2(int block, Input **inepp)
 {
 	static int flushing;
-	int redraw;
-
-	redraw = 0;
 
 	if(!flushing){
 		if(screen.dirty){
@@ -293,7 +293,6 @@ drawevents2(int block, Input **inepp)
 		case KeyPress:
 		case KeyRelease:
 			{
-				Input *input;
 				XKeyEvent *ep = &ev.xkey;
 				if(0)fprintf(
 					stderr,
@@ -481,7 +480,6 @@ keystr
 		if(ev.type == XShmGetEventBase(display) + ShmCompletion){
 			flushing = 0;
 			if(animating){
-				usleep(10000);
 				addredraw();
 			}
 			continue;

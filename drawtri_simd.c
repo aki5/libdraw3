@@ -113,7 +113,7 @@ void
 drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color)
 {
 	img->dirty = 1;
-	cliprect(&r, img->r);
+	r = cliprect(r, img->r);
 	rect_trisetup(&r, a, b, c);
 	drawtri_horse(img, &r, a, b, c, color);
 }

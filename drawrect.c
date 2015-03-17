@@ -7,7 +7,7 @@ drawrect(Image *img, Rect r, uchar *color)
 	int u, v;
 	u32int *pix, cval;
 
-	cliprect(&r, img->r);
+	r = cliprect(r, img->r);
 
 	img->dirty = 1;
 	cval = *(u32int*)color;

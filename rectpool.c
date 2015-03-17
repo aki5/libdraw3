@@ -114,7 +114,6 @@ void
 initrectpool(Rectpool *rpool, Rect r)
 {
 	int i;
-	Rectrow *row;
 	short *segr, s, tmp;
 	int sum;
 
@@ -137,7 +136,7 @@ fprintf(stderr, "sum = %d, i = %d, s = %d\n", sum, i-1, segr[i-1]);
 	rpool->bestfit = 3;
 
 	rpool->r = r;
-	row = addrow(rpool, r.v0, recth(&r));
+	addrow(rpool, r.v0, recth(&r));
 }
 
 void
@@ -265,8 +264,7 @@ rectfree(Rectpool *rpool, Rect r)
 	for(i = 0; i < rpool->nrows; i++){
 		row = rpool->rows + i;
 		if(row->v0 == r.v0){
-			int merged;
-			merged = 0;
+
 
 			addcol(row, r.u0, segrw);
 
