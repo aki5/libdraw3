@@ -42,7 +42,7 @@ loadimage8(Image *img, Rect clipr, uchar *data, int stride)
 			uchar grey8;
 			pix = img->img + v*img->stride + 4*u;
 			grey8 = *((uchar*)data + ((v-r.v0)+voff)*stride + ((u-r.u0)+uoff));
-#if 1
+#if 0
 			pix[0] = pix[0]*(255-grey8)/255 + grey8 ;
 			pix[1] = pix[1]*(255-grey8)/255 + grey8 ;
 			pix[2] = pix[2]*(255-grey8)/255 + grey8 ;
@@ -54,6 +54,7 @@ loadimage8(Image *img, Rect clipr, uchar *data, int stride)
 			pix[3] = grey8;
 #endif
 		}
+
 	}
 }
 

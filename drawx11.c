@@ -40,40 +40,40 @@ Image screen;
 long keysym2ucs(KeySym key);
 
 static int
-utf8_keysym(char *keystr, int cap, KeySym key)
+utf8encode(char *str, int cap, int code)
 {
+	uchar *s;
 	int len;
-	long rune;
-	if((rune = keysym2ucs(key)) == -1)
-		return 0;
-	if(rune <= 0x7f){
+
+	s = (uchar *)str;
+	if(code <= 0x7f){
 		if(cap < 2) return 0;
-		keystr[0] = rune;
-		keystr[1] = '\0';
+		s[0] = code;
+		s[1] = '\0';
 		len = 1;
-	} else if(rune <= 0x7ff){
+	} else if(code <= 0x7ff){
 		if(cap < 3) return 0;
-		keystr[0] = 0xc0|((rune>>6)&0x1f);
-		keystr[1] = 0x80|((rune>>0)&0x3f);
-		keystr[2] = '\0';
+		s[0] = 0xc0|((code>>6)&0x1f);
+		s[1] = 0x80|((code>>0)&0x3f);
+		s[2] = '\0';
 		len = 2;
-	} else if(rune <= 0xfff){
+	} else if(code <= 0xfff){
 		if(cap < 4) return 0;
-		keystr[0] = 0xe0|((rune>>12)&0x0f);
-		keystr[1] = 0x80|((rune>>6)&0x3f);
-		keystr[2] = 0x80|((rune>>0)&0x3f);
-		keystr[3] = '\0';
+		s[0] = 0xe0|((code>>12)&0x0f);
+		s[1] = 0x80|((code>>6)&0x3f);
+		s[2] = 0x80|((code>>0)&0x3f);
+		s[3] = '\0';
 		len = 3;
-	} else if(rune <= 0x1fffff){
+	} else if(code <= 0x1fffff){
 		if(cap < 5) return 0;
-		keystr[0] = 0xf0|((rune>>18)&0x07);
-		keystr[1] = 0x80|((rune>>12)&0x3f);
-		keystr[2] = 0x80|((rune>>6)&0x3f);
-		keystr[3] = 0x80|((rune>>0)&0x3f);
-		keystr[4] = '\0';
+		s[0] = 0xf0|((code>>18)&0x07);
+		s[1] = 0x80|((code>>12)&0x3f);
+		s[2] = 0x80|((code>>6)&0x3f);
+		s[3] = 0x80|((code>>0)&0x3f);
+		s[4] = '\0';
 		len = 4;
 	} else {
-		fprintf(stderr, "unicode U%lx sequence out of supported range\n", rune); 
+		fprintf(stderr, "unicode U%x sequence out of supported range\n", code); 
 		return 0; /* fail */
 	}
 	return len;
@@ -305,13 +305,16 @@ drawevents2(int block, Input **inepp)
 					ep->state
 				);
 
+				u64int mod;
 				KeySym keysym;
+				int code;
 				char keystr[8] = {0};
 
 				keysym = XLookupKeysym(ep, ep->state & (ShiftMask|LockMask));
-//				keysym = XKeycodeToKeysym(display, ep->keycode, 0);
-				utf8_keysym(keystr, sizeof keystr-1, keysym);
-				u64int mod;
+				if((code = keysym2ucs(keysym)) == -1)
+					return 0;
+				utf8encode(keystr, sizeof keystr-1, code);
+
 				switch(keysym){
 				case XK_Return:
 				case XK_KP_Enter:

@@ -36,7 +36,6 @@ typedef struct Rect Rect;
 typedef struct Image Image;
 typedef struct Input Input;
 
-
 struct Rect {
 	int u0;
 	int v0;
@@ -68,6 +67,17 @@ ptinrect(short *uv, Rect *r)
 		return 1;
 	return 0;
 }
+
+/*
+static inline Rect
+offsetrect(Rect r, short *p)
+{
+	r.u0 += p[0];
+	r.v0 += p[1];
+	r.uend += p[0];
+	r.vend += p[0];
+}
+*/
 
 static inline int
 ptinellipse(short *uv, short *c, short *d, int rad)
@@ -179,13 +189,14 @@ void drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color);
 int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix);
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
+void drawblend(Image *dst, Rect r, Image *src, Image *mask);
 
 void drawanimate(int flag);
 void loadimage8(Image *img, Rect clipr, uchar *data, int stride);
 void loadimage24(Image *img, Rect clipr, uchar *data, int stride);
 
 void initdrawstr(char *path);
-void drawstr(Image *img, Rect r, char *str, int len);
+Rect drawstr(Image *img, Rect r, char *str, int len);
 
 static inline void
 drawpixel(Image *img, short *pt, uchar *color)
@@ -201,7 +212,6 @@ static inline int
 signumi(int x)
 {
 	return (x>>31)|((unsigned)-x>>31);
-//	return (x>0)-(x<0); 
 }
 
 static inline int

@@ -7,7 +7,7 @@
 static FT_Library library;
 static FT_Face face;
 static int libinit;
-static int fontsize = 200;
+static int fontsize = 400;
 
 static int
 utf8decode(char *str, int *offp, int len)
@@ -45,36 +45,109 @@ initdrawstr(char *path)
 	FT_Set_Char_Size(face, fontsize<<6, 0, 100, 0); /* 50pt, 100dpi, whatever */
 }
 
-void
-drawstr(Image *img, Rect r, char *str, int len)
+Image *
+allocimage(Rect r, uchar *color)
 {
-	uchar *data;
+	Image *img;
+	int stride, off, len;
+
+	stride = 4*rectw(&r);
+	len = stride*recth(&r);
+	img = malloc(sizeof img[0] + len);
+	memset(img, 0, sizeof img[0]);
+	img->r = r;
+	img->len = len;
+	img->img = (uchar *)(img+1);
+	img->stride = stride;
+	if(color != NULL){
+		for(off = 0; off < len; off += 4){
+			img->img[off+0] = color[0];
+			img->img[off+1] = color[1];
+			img->img[off+2] = color[2];
+			img->img[off+3] = color[3];
+		}
+	}
+	return img;
+}
+
+void
+freeimage(Image *img)
+{
+	free(img);
+}
+
+Image *
+getglyph(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp)
+{
+	Rect rgly;
+	Image *glyim;
+
+
+	if(FT_Load_Char(face, code, FT_LOAD_DEFAULT) != 0) //FT_LOAD_RENDER
+		return NULL;
+
+	FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL); //FT_RENDER_MODE_LCD);
+	rgly = rect(0, 0, face->glyph->bitmap.width, face->glyph->bitmap.rows);
+
+	glyim = allocimage(rgly, NULL);
+	loadimage8(glyim, rgly, face->glyph->bitmap.buffer, face->glyph->bitmap.width);
+
+	*uoffp = face->glyph->bitmap_left;
+	*voffp = -face->glyph->bitmap_top;
+	*uadvp = face->glyph->advance.x>>6;
+	*vadvp = face->glyph->advance.y>>6;
+
+	return glyim;
+}
+
+void
+freeglyph(Image *img)
+{
+	freeimage(img);
+}
+
+Rect
+drawstr(Image *img, Rect rdst, char *str, int len)
+{
+	Image *blackim;
+	Rect rret;
 	int off, code;
-	short u0, v0, uend, vend;
+	short uoff, voff, uadv, vadv;
 
 	if(len == -1)
 		len = strlen(str);
 
-	for(off = 0; off < len && r.u0 < r.uend;){
+
+	blackim = allocimage(rect(0,0,1,1), color(255, 255, 255, 255));
+
+	rret.uend = rret.u0 = rdst.u0;
+	rret.vend = rret.v0 = rdst.v0;
+
+	for(off = 0; off < len && rdst.u0 < rdst.uend;){
 		code = utf8decode(str, &off, len);
 		if(code == -1){
 			off++;
 			continue;
 		}
 
-		if(FT_Load_Char(face, code, FT_LOAD_DEFAULT) != 0) //FT_LOAD_RENDER
-			continue;
-		FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL); //FT_RENDER_MODE_LCD);
-		data = face->glyph->bitmap.buffer;
-		u0 = r.u0 + face->glyph->bitmap_left;
-		v0 = r.v0 + 4+fontsize - face->glyph->bitmap_top;
-		uend = u0 + face->glyph->bitmap.width;
-		vend = v0 + face->glyph->bitmap.rows;
+		Image *glyim;
+		glyim = getglyph(code, &uoff, &voff, &uadv, &vadv);
 
-		Rect rr = cliprect(rect(u0, v0, uend, vend), r);
-		loadimage8(img, rr, data, face->glyph->bitmap.width);
-		//loadimage24(img, rr, data, face->glyph->bitmap.width);
+		Rect glydst;
+		glydst.u0 = rdst.u0 + uoff;
+		glydst.v0 = rdst.v0 + voff;
+		glydst.uend = glydst.u0 + rectw(&glyim->r);
+		glydst.vend = glydst.v0 + recth(&glyim->r);
 
-		r.u0 += (face->glyph->advance.x>>6);
+		drawblend(img, glydst, blackim, glyim);
+		freeglyph(glyim);
+
+		rdst.u0 += uadv;
+		rret.uend += uadv;
+		rret.vend = rret.vend < vadv ? rret.vend : vadv;
 	}
+
+	freeimage(blackim);
+
+	return rret;
 }

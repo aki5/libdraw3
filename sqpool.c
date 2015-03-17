@@ -493,7 +493,7 @@ main(int argc, char *argv[])
 	if(argc > 1)
 		initdrawstr(argv[1]);
 
-	speedup = 1000;
+	speedup = 1;
 	anodes = 10000;
 	nodes = malloc(anodes * sizeof nodes[0]);
 	nnodes = 0;
@@ -599,12 +599,12 @@ main(int argc, char *argv[])
 			}
 
 			drawrect(&screen, screen.r, black);
-			drawsqpool(&sqpool);
+			//drawsqpool(&sqpool);
 
 			static int count;
 			int n;
 			char msg[32];
-			n = snprintf(msg, sizeof msg, "Heippa! %d", count++);
+			n = snprintf(msg, sizeof msg, "sgi%03d", count++);
 			drawstr(&screen, rect(uoff, voff, screen.r.uend, screen.r.vend), msg, n);
 		}
 	}
