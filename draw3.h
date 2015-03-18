@@ -197,6 +197,7 @@ void loadimage24(Image *img, Rect clipr, uchar *data, int stride);
 
 void initdrawstr(char *path);
 Rect drawstr(Image *img, Rect r, char *str, int len);
+void setfontsize(int size);
 
 static inline void
 drawpixel(Image *img, short *pt, uchar *color)

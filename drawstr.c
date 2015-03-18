@@ -7,7 +7,7 @@
 static FT_Library library;
 static FT_Face face;
 static int libinit;
-static int fontsize = 400;
+static int fontsize = 20;
 
 static int
 utf8decode(char *str, int *offp, int len)
@@ -76,6 +76,13 @@ freeimage(Image *img)
 	free(img);
 }
 
+void
+setfontsize(int size)
+{
+	fontsize = size;
+	FT_Set_Char_Size(face, fontsize<<6, 0, 100, 0);
+}
+
 Image *
 getglyph(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp)
 {
@@ -95,7 +102,7 @@ getglyph(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp)
 	*uoffp = face->glyph->bitmap_left;
 	*voffp = -face->glyph->bitmap_top;
 	*uadvp = face->glyph->advance.x>>6;
-	*vadvp = face->glyph->advance.y>>6;
+	*vadvp = face->glyph->bitmap.rows + face->glyph->bitmap_top;
 
 	return glyim;
 }
@@ -109,7 +116,7 @@ freeglyph(Image *img)
 Rect
 drawstr(Image *img, Rect rdst, char *str, int len)
 {
-	Image *blackim;
+	Image *colim;
 	Rect rret;
 	int off, code;
 	short uoff, voff, uadv, vadv;
@@ -117,11 +124,13 @@ drawstr(Image *img, Rect rdst, char *str, int len)
 	if(len == -1)
 		len = strlen(str);
 
+	uchar color[4];
+	idx2color(2, color);
+	colim = allocimage(rect(0,0,1,1), color);
 
-	blackim = allocimage(rect(0,0,1,1), color(255, 255, 255, 255));
-
-	rret.uend = rret.u0 = rdst.u0;
-	rret.vend = rret.v0 = rdst.v0;
+	rret.u0 = rdst.u0;
+	rret.uend = rdst.u0;
+	rret.v0 = rdst.v0;
 
 	for(off = 0; off < len && rdst.u0 < rdst.uend;){
 		code = utf8decode(str, &off, len);
@@ -139,15 +148,15 @@ drawstr(Image *img, Rect rdst, char *str, int len)
 		glydst.uend = glydst.u0 + rectw(&glyim->r);
 		glydst.vend = glydst.v0 + recth(&glyim->r);
 
-		drawblend(img, glydst, blackim, glyim);
+		drawblend(img, glydst, colim, glyim);
 		freeglyph(glyim);
 
 		rdst.u0 += uadv;
 		rret.uend += uadv;
-		rret.vend = rret.vend < vadv ? rret.vend : vadv;
 	}
 
-	freeimage(blackim);
+	freeimage(colim);
 
+	rret.vend = rret.v0 + 15*fontsize/10;
 	return rret;
 }

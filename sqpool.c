@@ -437,8 +437,8 @@ void
 drawsqpool(Sqpool *pool)
 {
 	int i, d, u, v;
+
 	drawsqnodes(pool->root, NULL);
-return;
 	d = dd;
 	u = uoff-lspace*(d+1);
 	v = voff;
@@ -477,6 +477,7 @@ main(int argc, char *argv[])
 	int t;
 	int mouseid, drag = 0;
 	int dragx, dragy;
+	int fontsize = 100;
 	uchar black[4] = {0,0,0,255};
 
 	Sqpool sqpool;
@@ -492,6 +493,7 @@ main(int argc, char *argv[])
 
 	if(argc > 1)
 		initdrawstr(argv[1]);
+	setfontsize(fontsize);
 
 	speedup = 1;
 	anodes = 10000;
@@ -520,8 +522,24 @@ main(int argc, char *argv[])
 					speedup /= 10;
 				if(keystr(inp, "S"))
 					speedup = speedup > 0 ? speedup*10 : 1;
+				if(keystr(inp, "z")){
+					int nsize;
+					nsize = (11*fontsize)/10;
+					if(nsize <= fontsize)
+						nsize = fontsize+1;
+					fontsize = nsize;
+					setfontsize(fontsize);
+				}
+				if(keystr(inp, "x")){
+					int nsize;
+					nsize = (9*fontsize)/10;
+					if(nsize < 1)
+						nsize = 1;
+					fontsize = nsize;
+					setfontsize(fontsize);
+				}
 
-				if(keystr(inp, "r")){
+				if(keystr(inp, "s")){
 					for(i = 0; i < nnodes; i++){
 						Sqnode *tmp;
 						int j;
@@ -599,13 +617,25 @@ main(int argc, char *argv[])
 			}
 
 			drawrect(&screen, screen.r, black);
-			//drawsqpool(&sqpool);
+			drawsqpool(&sqpool);
 
 			static int count;
 			int n;
 			char msg[32];
-			n = snprintf(msg, sizeof msg, "sgi%03d", count++);
-			drawstr(&screen, rect(uoff, voff, screen.r.uend, screen.r.vend), msg, n);
+			n = snprintf(msg, sizeof msg, "Graphics may be easier");
+			Rect rr, sr = rect(uoff, voff, screen.r.uend, screen.r.vend);
+			sr.v0 += 15*fontsize/10;
+			rr = drawstr(&screen, sr, msg, n);
+			sr.v0 += recth(&rr);
+
+			n = snprintf(msg, sizeof msg, "than you'd think. Also,");
+			rr = drawstr(&screen, sr, msg, n);
+			sr.v0 += recth(&rr);
+
+			n = snprintf(msg, sizeof msg, "numbers %05d.", count++);
+			rr = drawstr(&screen, sr, msg, n);
+			sr.v0 += recth(&rr);
+
 		}
 	}
 	return 0;
