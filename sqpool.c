@@ -366,7 +366,7 @@ sqfree(Sqpool *pool, Sqnode *np)
 #ifdef TEST
 
 static int dd = 2;
-static int lspace = 200;
+static int lspace = 50;
 static int uoff = 0;
 static int voff = 0;
 
@@ -472,13 +472,21 @@ paretorand(double a, double b)
 }
 
 int
+roundup(int v)
+{
+	return (v&15) == 0 ? v : (v|15)+1;
+}
+
+int
 main(int argc, char *argv[])
 {
 	int t;
 	int mouseid, drag = 0;
 	int dragx, dragy;
-	int fontsize = 100;
+	int fontsize = 9;
 	uchar black[4] = {0,0,0,255};
+	double ts, prevts;
+	static char stuff[8192];
 
 	Sqpool sqpool;
 	Sqnode **nodes;
@@ -486,13 +494,24 @@ main(int argc, char *argv[])
 	int freeing;
 	int speedup;
 
-	rank = 16;
-	drawinit(5+lspace*(dd+1)+fib(rank), fib(rank));
+	rank = 13;
+	drawinit(roundup(5+lspace*(dd+1)+fib(rank)), roundup(fib(rank)));
 	uoff = 5+lspace*(dd+1); //fib(rank);
 	//root = rootnode(rank, 0, 0);
 
 	if(argc > 1)
 		initdrawstr(argv[1]);
+	if(argc > 2){
+		FILE *fp;
+		int n;
+		fp = fopen(argv[2], "rb");
+		n = fread(stuff, 1, 8191, fp);
+		fclose(fp);
+		if(n < 0) n = 1;
+		stuff[n-1] = '\0';
+fprintf(stderr, "read %d bytes\n", n);
+	}
+
 	setfontsize(fontsize);
 
 	speedup = 1;
@@ -504,6 +523,7 @@ main(int argc, char *argv[])
 	drawanimate(1);
 	srand48((long)(1e3*timenow()));
 	freeing = 0;
+	prevts = timenow();
 	for(;;){
 		Input *inp, *inep;
 		if((inp = drawevents(&inep)) != NULL){
@@ -622,19 +642,39 @@ main(int argc, char *argv[])
 			static int count;
 			int n;
 			char msg[32];
-			n = snprintf(msg, sizeof msg, "Graphics may be easier");
+			n = snprintf(msg, sizeof msg, "Graphics xyzzy cross product");
 			Rect rr, sr = rect(uoff, voff, screen.r.uend, screen.r.vend);
 			sr.v0 += 15*fontsize/10;
 			rr = drawstr(&screen, sr, msg, n);
 			sr.v0 += recth(&rr);
 
-			n = snprintf(msg, sizeof msg, "than you'd think. Also,");
+			n = snprintf(msg, sizeof msg, "or determinants. Also,");
 			rr = drawstr(&screen, sr, msg, n);
 			sr.v0 += recth(&rr);
 
 			n = snprintf(msg, sizeof msg, "numbers %05d.", count++);
 			rr = drawstr(&screen, sr, msg, n);
 			sr.v0 += recth(&rr);
+
+			n = snprintf(msg, sizeof msg, "time %.3f", fmod(timenow(), 100.0));
+			rr = drawstr(&screen, sr, msg, n);
+			sr.v0 += recth(&rr);
+
+			char *sp = stuff;
+			while(*sp != '\0'){
+				char *np;
+				if((np = strchr(sp, '\n')) == NULL)
+					break;
+				rr = drawstr(&screen, sr, sp, np-sp);
+				sr.v0 += recth(&rr);
+				sp = np+1;
+			}
+
+			ts = timenow();
+			n = snprintf(msg, sizeof msg, "%.3f frames/sec", 1.0/(ts-prevts));
+			rr = drawstr(&screen, rect(screen.r.u0, screen.r.v0+fontsize+4, screen.r.uend,screen.r.vend), msg, n);
+			sr.v0 += recth(&rr);
+			prevts = ts;
 
 		}
 	}
