@@ -84,7 +84,8 @@ shminit(void)
 {
 	shmimage = XShmCreateImage(
 		display, visual,
-		DefaultDepth(display, 0), ZPixmap,
+		DefaultDepth(display, 0),
+		ZPixmap,
 		NULL, &shminfo, width, height
 	);
 	if(shmimage == NULL){
@@ -110,10 +111,17 @@ shminit(void)
 	framebuffer = (uchar *)shmimage->data;
 	stride = shmimage->bytes_per_line;
 
-	screen.stride = shmimage->bytes_per_line;
-	screen.img = (uchar *)shmimage->data;
-	screen.len = shmimage->bytes_per_line*shmimage->height;
-	screen.r = rect(0,0,shmimage->width,shmimage->height);
+	if(shmimage->bits_per_pixel < 24){
+		screen.r = rect(0,0,shmimage->width,shmimage->height);
+		screen.stride = shmimage->width*4;
+		screen.len = shmimage->height*screen.stride;
+		screen.img = malloc(screen.len);
+	} else {
+		screen.r = rect(0,0,shmimage->width,shmimage->height);
+		screen.stride = shmimage->bytes_per_line;
+		screen.img = (uchar *)shmimage->data;
+		screen.len = shmimage->bytes_per_line*shmimage->height;
+	} 
 
 	return 0;
 }
@@ -168,9 +176,37 @@ drawinit(int w, int h)
 	return XConnectionNumber(display);
 }
 
-static void
+void
 drawflush(Rect r)
 {
+	if(shmimage->bits_per_pixel == 16){
+		int i;
+		double st, et;
+		uchar *src, *dst;
+		int dvoff, svoff;
+		int iend;
+
+		st = timenow();
+		src = screen.img;
+		dst = (uchar*)shmimage->data;
+		iend = screen.r.vend;
+		svoff = 0;
+		dvoff = 0;
+		for(i = 0; i < iend; i++){
+			pixcpy_dst16(dst+dvoff, src+svoff, screen.stride);
+			svoff += screen.stride;
+			dvoff += shmimage->bytes_per_line;
+		}
+		et = timenow();
+static int cnt;
+if(cnt >= 100){
+	fprintf(stderr, "blit in %f sec, %f MB/s\n", (et-st), 1e-6*(iend*screen.stride)/(et-st));
+	cnt = 0;
+} else {
+	cnt++;
+}
+
+	}
 	XShmPutImage(
 		display, window, DefaultGC(display, 0),
 		shmimage,
