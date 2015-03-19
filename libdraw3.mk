@@ -8,13 +8,14 @@ DRAW3_HFILES=\
 DRAW3_OFILES=\
 	$(R)/drawx11.o\
 	$(R)/keysym2ucs.o \
-	$(R)/drawtri_simd.o\
 	$(R)/drawpoly.o\
 	$(R)/drawrect.o\
 	$(R)/rectpool.o\
 	$(R)/loadimage.o\
 	$(R)/sqpool.o\
 	$(R)/drawstr.o\
+	$(R)/arm6.o\
+	#$(R)/drawtri_simd.o\
 
 $(R)/%.o: $(R)/%.c
 	$(CC) -I$(R) $(CFLAGS) -c -o $@ $<
