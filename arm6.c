@@ -1,12 +1,25 @@
 #include "os.h"
 #include "draw3.h"
 
+/*
+ *	Use prefetches and ldm/stm on the raspberry, they really go a lot faster.
+ *	The ginormous register pressure they create makes it hard to have just
+ *	ldm/stm inline routines: gcc runs out of registers and generates tons of
+ *	spills.
+ *
+ *	Not to blame gcc, it's a tough task for people too.
+ */
+
 void
 pixcpy_src8(uchar *dst, uchar *src, int nsrc)
 {
 	int i;
 
-	for(i = 0; i < nsrc && ((u32int)src & 3) != 0; i++){
+	/*
+	 *	ldm/stm needs word alignment, so do that for now.
+	 *	would be nice to try and cache align output.. but oh well
+	 */
+	for(i = 0; i < nsrc && ((uintptr)src & 3) != 0; i++){
 		u32int a;
 		a = *src;
 		a |= a<<8;
@@ -183,8 +196,15 @@ pixset(uchar *dst, uchar *val, int nbytes)
 		i asm("r14");
 
 	a = *(u32int*)val;
+
+	/* align to cache-line */
+	for(i = 0; i < nbytes && ((uintptr)dst & 31) != 0; i += 4){
+		*(u32int*)dst = a;
+		dst += 4;
+	}
+
+	/* do full cache lines */
 	nbytes -= 31;
-	i = 0;
 	if(nbytes > 0){
 		b = c = d = e = f = g = h = a;
 		for(; i < nbytes; i += 32){
@@ -199,6 +219,8 @@ pixset(uchar *dst, uchar *val, int nbytes)
 		}
 	}
 	nbytes += 31;
+
+	/* the remainder */
 	for(; i < nbytes; i += 4){
 		*(u32int*)dst = a;
 		dst += 4;
