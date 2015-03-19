@@ -76,26 +76,54 @@ freeimage(Image *img)
 	free(img);
 }
 
+
+static struct {
+	int code;
+	short uoff;
+	short voff;
+	short uadv;
+	short vadv;
+	short width;
+	short height;
+	Image *img;
+} *cache[65536];
+
 void
 setfontsize(int size)
 {
+	int i;
 	fontsize = size;
 	FT_Set_Char_Size(face, fontsize<<6, 0, 100, 0);
+	for(i = 0; i < nelem(cache); i++){
+		if(cache[i] != NULL){
+			freeimage(cache[i]->img);
+			free(cache[i]);
+			cache[i] = NULL;
+		}
+	}
 }
 
 Image *
-getglyph(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp)
+glyphsetup(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp, short *width, short *height)
 {
 	Rect rgly;
 	Image *glyim;
 
+	if(code >= 0 && code < nelem(cache) && cache[code] != NULL){
+		*uoffp = cache[code]->uoff;
+		*voffp = cache[code]->voff;
+		*uadvp = cache[code]->uadv;
+		*vadvp = cache[code]->vadv;
+		*width = cache[code]->width;
+		*height = cache[code]->height;
+		return cache[code]->img;
+	}
 
 	if(FT_Load_Char(face, code, FT_LOAD_DEFAULT) != 0) //FT_LOAD_RENDER
 		return NULL;
 
 	FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL); //FT_RENDER_MODE_LCD);
 	rgly = rect(0, 0, face->glyph->bitmap.width, face->glyph->bitmap.rows);
-
 	glyim = allocimage(rgly, NULL);
 	loadimage8(glyim, rgly, face->glyph->bitmap.buffer, face->glyph->bitmap.width);
 
@@ -103,6 +131,19 @@ getglyph(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp)
 	*voffp = -face->glyph->bitmap_top;
 	*uadvp = face->glyph->advance.x>>6;
 	*vadvp = face->glyph->bitmap.rows + face->glyph->bitmap_top;
+	*width = face->glyph->bitmap.width;
+	*height = face->glyph->bitmap.rows;
+
+	if(code >= 0 && code < nelem(cache)){
+		cache[code] = malloc(sizeof cache[0][0]);
+		cache[code]->uoff = *uoffp;
+		cache[code]->voff = *voffp;
+		cache[code]->uadv = *uadvp;
+		cache[code]->vadv = *vadvp;
+		cache[code]->width = *width;
+		cache[code]->height = *height;
+		cache[code]->img = glyim;
+	}
 
 	return glyim;
 }
@@ -110,7 +151,7 @@ getglyph(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp)
 void
 freeglyph(Image *img)
 {
-	freeimage(img);
+	//freeimage(img);
 }
 
 Rect
@@ -119,7 +160,7 @@ drawstr(Image *img, Rect rdst, char *str, int len)
 	Image *colim;
 	Rect rret;
 	int off, code;
-	short uoff, voff, uadv, vadv;
+	short uoff, voff, uadv, vadv, width, height;
 
 	if(len == -1)
 		len = strlen(str);
@@ -139,14 +180,22 @@ drawstr(Image *img, Rect rdst, char *str, int len)
 			continue;
 		}
 
+		if(code == '\t'){
+			rdst.u0 += 50;
+			rret.uend += 50;
+			continue;
+		}
+
 		Image *glyim;
-		glyim = getglyph(code, &uoff, &voff, &uadv, &vadv);
+		glyim = glyphsetup(code, &uoff, &voff, &uadv, &vadv, &width, &height);
+		if(glyim == NULL)
+			continue;
 
 		Rect glydst;
 		glydst.u0 = rdst.u0 + uoff;
 		glydst.v0 = rdst.v0 + voff;
-		glydst.uend = glydst.u0 + rectw(&glyim->r);
-		glydst.vend = glydst.v0 + recth(&glyim->r);
+		glydst.uend = glydst.u0 + width; //rectw(&glyim->r);
+		glydst.vend = glydst.v0 + height; //recth(&glyim->r);
 
 		drawblend(img, glydst, colim, glyim);
 		freeglyph(glyim);
