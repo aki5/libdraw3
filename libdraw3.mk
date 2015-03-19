@@ -14,7 +14,8 @@ DRAW3_OFILES=\
 	$(R)/loadimage.o\
 	$(R)/sqpool.o\
 	$(R)/drawstr.o\
-	$(R)/arm6.o\
+	$(R)/port.o\
+	#$(R)/arm6.o\
 	#$(R)/drawtri_simd.o\
 
 $(R)/%.o: $(R)/%.c
