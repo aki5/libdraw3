@@ -486,7 +486,7 @@ main(int argc, char *argv[])
 	int fontsize = 9;
 	uchar black[4] = {0,0,0,255};
 	double ts, prevts;
-	static char stuff[8192];
+	static char stuff[65536];
 
 	Sqpool sqpool;
 	Sqnode **nodes;
@@ -505,7 +505,7 @@ main(int argc, char *argv[])
 		FILE *fp;
 		int n;
 		fp = fopen(argv[2], "rb");
-		n = fread(stuff, 1, 8191, fp);
+		n = fread(stuff, 1, sizeof stuff-1, fp);
 		fclose(fp);
 		if(n < 0) n = 1;
 		stuff[n-1] = '\0';
