@@ -477,6 +477,42 @@ roundup(int v)
 	return (v&15) == 0 ? v : (v|15)+1;
 }
 
+void
+spintri(float a, int coloridx, int dst, int xoff)
+{
+	uchar color[4];
+
+	short *pta = pt(0,0), *ptb = pt(dst,dst/2), *ptc = pt(dst,-dst/2);
+	short ptx[2], pty[2], ptz[2];
+	short off = xoff;
+	short *cent = pt(rectw(&screen.r)/2,recth(&screen.r)/2);
+
+
+	pta[0] += off;
+	ptb[0] += off;
+	ptc[0] += off;
+
+	ptx[0] = +(cosf(a)*pta[0] - sinf(a)*pta[1]);
+	ptx[1] = +(sinf(a)*pta[0] + cosf(a)*pta[1]);
+
+	pty[0] = +(cosf(a)*ptb[0] - sinf(a)*ptb[1]);
+	pty[1] = +(sinf(a)*ptb[0] + cosf(a)*ptb[1]);
+
+	ptz[0] = +(cosf(a)*ptc[0] - sinf(a)*ptc[1]);
+	ptz[1] = +(sinf(a)*ptc[0] + cosf(a)*ptc[1]);
+
+	ptx[0] += cent[0];
+	pty[0] += cent[0];
+	ptz[0] += cent[0];
+
+	ptx[1] += cent[1];
+	pty[1] += cent[1];
+	ptz[1] += cent[1];
+	
+	idx2color(coloridx, color);
+	drawtri(&screen, screen.r, ptx, pty, ptz, color);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -494,7 +530,7 @@ main(int argc, char *argv[])
 	int freeing;
 	int speedup;
 
-	rank = 13;
+	rank = 14;
 	drawinit(roundup(5+lspace*(dd+1)+fib(rank)), roundup(fib(rank)));
 	uoff = 5+lspace*(dd+1); //fib(rank);
 	//root = rootnode(rank, 0, 0);
@@ -641,7 +677,7 @@ fprintf(stderr, "read %d bytes\n", n);
 
 			static int count;
 			int n;
-			char msg[32];
+			char msg[128];
 			n = snprintf(msg, sizeof msg, "Graphics xyzzy cross product");
 			Rect rr, sr = rect(uoff, voff, screen.r.uend, screen.r.vend);
 			sr.v0 += 15*fontsize/10;
@@ -660,6 +696,24 @@ fprintf(stderr, "read %d bytes\n", n);
 			rr = drawstr(&screen, sr, msg, n);
 			sr.v0 += recth(&rr);
 
+
+double tm = prevts;
+int d;
+float a;
+
+d = rectw(&screen.r) < recth(&screen.r) ? rectw(&screen.r)/2-40 : recth(&screen.r)/2-40;
+
+a = fmod(tm/(12*3600)*2.0*M_PI, 2.0*M_PI);
+spintri(a, 0, 60, d-30);
+a = fmod(tm/3600*2.0*M_PI, 2.0*M_PI);
+spintri(a, 9, 50, d-20);
+a = fmod(tm/60*2.0*M_PI, 2.0*M_PI);
+spintri(a, 4, 40, d-10);
+/*
+a = fmod(tm*2.0*M_PI, 2.0*M_PI);
+spintri(a, 2, 30, d);
+*/
+
 			char *sp = stuff;
 			while(*sp != '\0'){
 				char *np;
@@ -675,6 +729,7 @@ fprintf(stderr, "read %d bytes\n", n);
 			rr = drawstr(&screen, rect(screen.r.u0, screen.r.v0+fontsize+4, screen.r.uend,screen.r.vend), msg, n);
 			sr.v0 += recth(&rr);
 			prevts = ts;
+
 
 		}
 	}
