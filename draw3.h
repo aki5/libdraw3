@@ -193,7 +193,10 @@ void drawblend(Image *dst, Rect r, Image *src, Image *mask);
 
 void drawanimate(int flag);
 void loadimage8(Image *img, Rect clipr, uchar *data, int stride);
-void loadimage24(Image *img, Rect clipr, uchar *data, int stride);
+
+void pixset(uchar *dst, uchar *val, int len);
+void pixcpy_dst16(uchar *dst, uchar *src, int nbytes);
+void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 
 void initdrawstr(char *path);
 Rect drawstr(Image *img, Rect r, char *str, int len);
