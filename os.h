@@ -5,11 +5,13 @@
 #include <math.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <inttypes.h>
 
 typedef unsigned char uchar;
 typedef unsigned short u16int;
 typedef unsigned int u32int;
 typedef unsigned long long u64int;
+typedef uintptr_t uintptr;
 
 #define nelem(x) (int)(sizeof(x)/sizeof(x[0]))
 
