@@ -102,10 +102,22 @@ cliprect(Rect r, Rect cr)
 		r.u0 = cr.u0;
 	if(r.v0 < cr.v0)
 		r.v0 = cr.v0;
+
+	if(r.u0 > cr.uend)
+		r.u0 = cr.uend;
+	if(r.v0 > cr.vend)
+		r.v0 = cr.vend;
+
+	if(r.uend < cr.v0)
+		r.uend = cr.u0;
+	if(r.vend < cr.v0)
+		r.vend = cr.v0;
+
 	if(r.uend > cr.uend)
 		r.uend = cr.uend;
 	if(r.vend > cr.vend)
 		r.vend = cr.vend;
+
 	return r;
 }
 
