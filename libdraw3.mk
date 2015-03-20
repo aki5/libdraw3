@@ -15,7 +15,8 @@ DRAW3_OFILES=\
 	$(R)/sqpool.o\
 	$(R)/drawstr.o\
 	$(R)/port.o\
-	$(R)/drawtri_simd.o\
+	$(R)/drawtri.o\
+	#$(R)/drawtri_simd.o\
 	#$(R)/arm6.o\
 
 $(R)/%.o: $(R)/%.c
