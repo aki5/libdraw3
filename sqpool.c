@@ -482,15 +482,15 @@ spintri(float a, int coloridx, int dst, int xoff)
 {
 	uchar color[4];
 
-	short *pta = pt(0,0), *ptb = pt(dst,dst/2), *ptc = pt(dst,-dst/2);
+	short *pta = pt(0,dst), *ptb = pt(dst/2,0), *ptc = pt(-dst/2,0);
 	short ptx[2], pty[2], ptz[2];
 	short off = xoff;
 	short *cent = pt(rectw(&screen.r)/2,recth(&screen.r)/2);
 
 
-	pta[0] += off;
-	ptb[0] += off;
-	ptc[0] += off;
+	pta[1] -= off;
+	ptb[1] -= off;
+	ptc[1] -= off;
 
 	ptx[0] = +(cosf(a)*pta[0] - sinf(a)*pta[1]);
 	ptx[1] = +(sinf(a)*pta[0] + cosf(a)*pta[1]);
@@ -697,7 +697,7 @@ fprintf(stderr, "read %d bytes\n", n);
 			sr.v0 += recth(&rr);
 
 
-double tm = prevts;
+double tm = prevts - 7.0*3600.0; // adjust to silicon valley time
 int d;
 float a;
 
