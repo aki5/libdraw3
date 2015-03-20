@@ -42,15 +42,6 @@ topleft(short *a, short *b)
 	return vec4ir(0); /* top or left */
 }
 
-static void
-rect_trisetup(Rect *r, short *a, short *b, short *c)
-{
-	r->u0 = maxi(r->u0, mini(a[0], mini(b[0], c[0])));
-	r->v0 = maxi(r->v0, mini(a[1], mini(b[1], c[1])));
-	r->uend = mini(r->uend-1, maxi(a[0], maxi(b[0], c[0]))) + 1;
-	r->vend = mini(r->vend-1, maxi(a[1], maxi(b[1], c[1]))) + 1;
-}
-
 static inline void
 drawtri_horse(Image *img, Rect *r, short *a, short *b, short *c, uchar *color)
 {
@@ -107,6 +98,15 @@ drawtri_horse(Image *img, Rect *r, short *a, short *b, short *c, uchar *color)
 		bcp_y += bcp_dy;
 		cap_y += cap_dy;
 	}
+}
+
+static void
+rect_trisetup(Rect *r, short *a, short *b, short *c)
+{
+	r->u0 = maxi(r->u0, mini(a[0], mini(b[0], c[0])));
+	r->v0 = maxi(r->v0, mini(a[1], mini(b[1], c[1])));
+	r->uend = mini(r->uend-1, maxi(a[0], maxi(b[0], c[0]))) + 1;
+	r->vend = mini(r->vend-1, maxi(a[1], maxi(b[1], c[1]))) + 1;
 }
 
 void
