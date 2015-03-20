@@ -4,6 +4,7 @@ DRAW3_HFILES=\
 	$(R)/draw3.h\
 	$(R)/rectpool.h\
 	$(R)/sqpool.h\
+	$(R)/magicu.h\
 
 DRAW3_OFILES=\
 	$(R)/drawx11.o\
@@ -16,6 +17,7 @@ DRAW3_OFILES=\
 	$(R)/drawstr.o\
 	$(R)/port.o\
 	$(R)/drawtri.o\
+	$(R)/magicu.o\
 	#$(R)/drawtri_simd.o\
 	#$(R)/arm6.o\
 
