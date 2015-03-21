@@ -5,6 +5,7 @@ DRAW3_HFILES=\
 	$(R)/rectpool.h\
 	$(R)/sqpool.h\
 	$(R)/magicu.h\
+	$(R)/imgtools.h\
 
 DRAW3_OFILES=\
 	$(R)/drawx11.o\
