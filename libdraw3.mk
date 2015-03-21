@@ -15,11 +15,13 @@ DRAW3_OFILES=\
 	$(R)/loadimage.o\
 	$(R)/sqpool.o\
 	$(R)/drawstr.o\
-	$(R)/port.o\
 	$(R)/drawtri.o\
-	$(R)/magicu.o\
-	#$(R)/drawtri_simd.o\
+	$(R)/drawcircle.o\
+	$(R)/drawellipse.o\
+	$(R)/port.o\
 	#$(R)/arm6.o\
+	#$(R)/magicu.o\
+	#$(R)/drawtri_simd.o\
 
 $(R)/%.o: $(R)/%.c
 	$(CC) -I$(R) $(CFLAGS) -c -o $@ $<
