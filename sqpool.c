@@ -478,39 +478,57 @@ roundup(int v)
 }
 
 void
+spinpt(float a, float scale, short *pt)
+{
+	short ptu, ptv;
+	short *cent = pt(
+		rectw(&screen.r)/2,
+		recth(&screen.r)/2
+	);
+	ptu = pt[0] - cent[0];
+	ptv = pt[1] - cent[1];
+	pt[0] = scale*cent[0] + scale*(cosf(a)*ptu - sinf(a)*ptv);
+	pt[1] = scale*cent[1] + scale*(sinf(a)*ptu + cosf(a)*ptv);
+}
+
+void
 spintri(float a, int coloridx, int dst, int xoff)
 {
 	uchar color[4];
 
-	short *pta = pt(0,dst), *ptb = pt(dst/2,0), *ptc = pt(-dst/2,0);
+	short *pta = pt(0,recth(&screen.r)/2-2*dst), *ptb = pt(dst/2,0), *ptc = pt(-dst/2,0);
 	short ptx[2], pty[2], ptz[2];
 	short off = xoff;
-	short *cent = pt(rectw(&screen.r)/2,recth(&screen.r)/2);
+	short *cent = pt(
+		rectw(&screen.r)/2,
+		recth(&screen.r)/2
+	);
 
+	float scale = 16.0f;
 
 	pta[1] -= off;
 	ptb[1] -= off;
 	ptc[1] -= off;
 
-	ptx[0] = +(cosf(a)*pta[0] - sinf(a)*pta[1]);
-	ptx[1] = +(sinf(a)*pta[0] + cosf(a)*pta[1]);
+	ptx[0] = scale*(cosf(a)*pta[0] - sinf(a)*pta[1]);
+	ptx[1] = scale*(sinf(a)*pta[0] + cosf(a)*pta[1]);
 
-	pty[0] = +(cosf(a)*ptb[0] - sinf(a)*ptb[1]);
-	pty[1] = +(sinf(a)*ptb[0] + cosf(a)*ptb[1]);
+	pty[0] = scale*(cosf(a)*ptb[0] - sinf(a)*ptb[1]);
+	pty[1] = scale*(sinf(a)*ptb[0] + cosf(a)*ptb[1]);
 
-	ptz[0] = +(cosf(a)*ptc[0] - sinf(a)*ptc[1]);
-	ptz[1] = +(sinf(a)*ptc[0] + cosf(a)*ptc[1]);
+	ptz[0] = scale*(cosf(a)*ptc[0] - sinf(a)*ptc[1]);
+	ptz[1] = scale*(sinf(a)*ptc[0] + cosf(a)*ptc[1]);
 
-	ptx[0] += cent[0];
-	pty[0] += cent[0];
-	ptz[0] += cent[0];
+	ptx[0] += scale*cent[0];
+	pty[0] += scale*cent[0];
+	ptz[0] += scale*cent[0];
 
-	ptx[1] += cent[1];
-	pty[1] += cent[1];
-	ptz[1] += cent[1];
+	ptx[1] += scale*cent[1];
+	pty[1] += scale*cent[1];
+	ptz[1] += scale*cent[1];
 	
 	idx2color(coloridx, color);
-	drawtri(&screen, screen.r, ptx, pty, ptz, color);
+	drawtri_pscl(&screen, screen.r, ptx, pty, ptz, 4, color);
 }
 
 int
@@ -523,6 +541,7 @@ main(int argc, char *argv[])
 	uchar black[4] = {0,0,0,255};
 	double ts, prevts;
 	static char stuff[65536];
+	int circle = 1;
 
 	Sqpool sqpool;
 	Sqnode **nodes;
@@ -568,6 +587,8 @@ fprintf(stderr, "read %d bytes\n", n);
 
 				if(keystr(inp, "q") || keypress(inp, KeyDel))
 					exit(0);
+				if(keystr(inp, "e"))
+					circle ^= 1;
 				if(keystr(inp, "f"))
 					freeing = 1;
 				if(keystr(inp, "a"))
@@ -622,7 +643,7 @@ fprintf(stderr, "read %d bytes\n", n);
 						drag = 0;
 				}
 
-				if(animate(inp)){
+				if(0 && animate(inp)){
 					if(freeing == 0){
 						for(i = 0; i < speedup; i++){
 							double er;
@@ -673,7 +694,7 @@ fprintf(stderr, "read %d bytes\n", n);
 			}
 
 			drawrect(&screen, screen.r, black);
-			drawsqpool(&sqpool);
+			//drawsqpool(&sqpool);
 
 			static int count;
 			int n;
@@ -701,6 +722,23 @@ double tm = prevts - 7.0*3600.0; // adjust to silicon valley time
 int d;
 float a;
 
+uchar color[4];
+idx2color(11, color);
+
+if(circle){
+	a = fmod(tm/20.0*2.0*M_PI, 2.0*M_PI);
+	short *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
+	spinpt(a, 16.0f, apt);
+	drawcircle(&screen, screen.r, apt, 100<<4, 4, color);
+} else {
+	a = fmod(tm/20.0*2.0*M_PI, 2.0*M_PI);
+	short *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
+	short *bpt = pt(rectw(&screen.r)/2-100, recth(&screen.r)/2-100);
+	spinpt(a, 16.0f, apt);
+	spinpt(a, 16.0f, bpt);
+	drawellipse(&screen, screen.r, apt, bpt, 100<<4, 4, color);
+}
+
 d = rectw(&screen.r) < recth(&screen.r) ? rectw(&screen.r)/2-40 : recth(&screen.r)/2-40;
 
 a = fmod(tm/(12*3600)*2.0*M_PI, 2.0*M_PI);
@@ -708,7 +746,9 @@ spintri(a, 0, 60, d-30);
 a = fmod(tm/3600*2.0*M_PI, 2.0*M_PI);
 spintri(a, 9, 50, d-20);
 a = fmod(tm/60*2.0*M_PI, 2.0*M_PI);
-spintri(a, 4, 40, d-10);
+spintri(a, 5, 40, d-10);
+
+
 /*
 a = fmod(tm*2.0*M_PI, 2.0*M_PI);
 spintri(a, 2, 30, d);
