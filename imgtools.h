@@ -7,6 +7,9 @@ rcp32(s32int pshift, s32int q)
 {
 	s32int tag, z;
 
+	if(q==0)
+		return -1;
+
 	z = 1 << (pshift-(31-__builtin_clz(q)));
 	tag = q >> ((31-2)-__builtin_clz(q));
 

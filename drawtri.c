@@ -57,6 +57,28 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 		bcp_y += topleft(b, c);
 		cap_y += topleft(c, a);
 	} /* else: todo.. */
+	
+	enum { HalfP = 10, P = 2*HalfP };
+
+	s32int abp_rcpdx;
+	s32int bcp_rcpdx;
+	s32int cap_rcpdx;
+
+	s32int abp_rcpdy;
+	s32int bcp_rcpdy;
+	s32int cap_rcpdy;
+
+	abp_rcpdx = rcp32(P, iabs(abp_dx));
+	bcp_rcpdx = rcp32(P, iabs(bcp_dx));
+	cap_rcpdx = rcp32(P, iabs(cap_dx));
+
+	abp_rcpdy = rcp32(P, iabs(abp_dy));
+	bcp_rcpdy = rcp32(P, iabs(bcp_dy));
+	cap_rcpdy = rcp32(P, iabs(cap_dy));
+
+	if(abp_rcpdy == -1 || bcp_rcpdy == -1 || cap_rcpdy == -1 ||
+	abp_rcpdx == -1 || bcp_rcpdx == -1 || cap_rcpdx == -1)
+		printf("got -1\n");
 
 	while(dst_ustart < dst_end){
 		abp = abp_y;
@@ -97,8 +119,22 @@ abp_dx, bcp_dx, cap_dx,
 abp_dy, bcp_dy, cap_dy
 );
 					int tmp, xx;
-					tmp = 255;
 					xx = 255;
+					tmp = 255;
+					xx = (s64int)255*abp*abp_rcpdx >> P;
+					tmp = mini(tmp, xx);
+					xx = (s64int)255*bcp*bcp_rcpdx >> P;
+					tmp = mini(tmp, xx);
+					xx = (s64int)255*cap*cap_rcpdx >> P;
+					tmp = mini(tmp, xx);
+
+					xx = (s64int)255*abp*abp_rcpdy >> P;
+					tmp = mini(tmp, xx);
+					xx = (s64int)255*bcp*bcp_rcpdy >> P;
+					tmp = mini(tmp, xx);
+					xx = (s64int)255*cap*cap_rcpdy >> P;
+					tmp = mini(tmp, xx);
+#if 0
 					if(abp_dx != 0)
 						xx = 255*abp/iabs(abp_dx);
 					tmp = mini(tmp, xx);
@@ -118,6 +154,7 @@ abp_dy, bcp_dy, cap_dy
 					if(cap_dy != 0)
 						xx = 255*cap/iabs(cap_dy);
 					tmp = mini(tmp, xx);
+#endif
 
 					*dstp = blend32(*dstp, color32, tmp);
 				} else {

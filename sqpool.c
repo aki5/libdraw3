@@ -725,6 +725,7 @@ float a;
 uchar color[4];
 idx2color(11, color);
 
+if(0){
 if(circle){
 	a = fmod(tm/20.0*2.0*M_PI, 2.0*M_PI);
 	short *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
@@ -737,6 +738,7 @@ if(circle){
 	spinpt(a, 16.0f, apt);
 	spinpt(a, 16.0f, bpt);
 	drawellipse(&screen, screen.r, apt, bpt, 100<<4, 4, color);
+}
 }
 
 d = rectw(&screen.r) < recth(&screen.r) ? rectw(&screen.r)/2-40 : recth(&screen.r)/2-40;

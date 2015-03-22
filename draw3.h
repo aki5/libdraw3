@@ -281,13 +281,13 @@ nori2i(short *pa, short *pb, short *pc)
 	return det2i(a, b, c, d);
 }
 
-static inline int
+static inline short
 ori2i_dx(short *pa, short *pb)
 {
 	return (pb[1] - pa[1]);
 }
 
-static inline int
+static inline short
 ori2i_dy(short *pa, short *pb)
 {
 	return -(pb[0] - pa[0]);
