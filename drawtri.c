@@ -15,12 +15,6 @@ topleft(short *a, short *b)
 	return 0; /* top or left */
 }
 
-int
-iabs(int x)
-{
-	return x >= 0 ? x : -x;
-}
-
 static inline void
 drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uchar *color)
 {

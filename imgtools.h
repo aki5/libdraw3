@@ -2,6 +2,26 @@
 #define passto_if(x) if(__builtin_expect(x, 1))
 #define goto_if(x) if(__builtin_expect(x, 0))
 
+static inline s32int
+rcp32(s32int pshift, s32int q)
+{
+	s32int tag, z;
+
+	z = 1 << (pshift-(31-__builtin_clz(q)));
+	tag = q >> ((31-2)-__builtin_clz(q));
+
+	if(tag == 7)
+		z = z>>1;
+	if(tag == 5 || tag == 6 || q == 3)
+		z = (z|(z>>1))>>1;
+
+	z = z + ((z*((1<<pshift)-q*z))>>pshift);
+	z = z + ((z*((1<<pshift)-q*z))>>pshift);
+	z = z + ((z*((1<<pshift)-q*z))>>pshift);
+
+	return z;
+}
+
 static inline u32int
 blend32(u32int dval, u32int sval, u32int mval)
 {
