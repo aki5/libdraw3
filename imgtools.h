@@ -3,12 +3,12 @@
 #define goto_if(x) if(__builtin_expect(x, 0))
 
 static inline s32int
-rcp32(s32int pshift, s32int q)
+rcp17(s32int pshift, s32int q)
 {
 	s32int tag, z;
 
 	if(q==0)
-		return -1;
+		return 1<<pshift;
 
 	z = 1 << (pshift-(31-__builtin_clz(q)));
 	tag = q >> ((31-2)-__builtin_clz(q));
@@ -18,9 +18,9 @@ rcp32(s32int pshift, s32int q)
 	if(tag == 5 || tag == 6 || q == 3)
 		z = (z|(z>>1))>>1;
 
-	z = z + ((z*((1<<pshift)-q*z))>>pshift);
-	z = z + ((z*((1<<pshift)-q*z))>>pshift);
-	z = z + ((z*((1<<pshift)-q*z))>>pshift);
+	z = z + (((z<<pshift)-q*z*z)>>pshift);
+	z = z + (((z<<pshift)-q*z*z)>>pshift);
+	z = z + (((z<<pshift)-q*z*z)>>pshift);
 
 	return z;
 }

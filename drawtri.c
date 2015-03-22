@@ -58,7 +58,7 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 		cap_y += topleft(c, a);
 	} /* else: todo.. */
 	
-	enum { HalfP = 10, P = 2*HalfP };
+	enum { P = 24 };
 
 	s32int abp_rcpdx;
 	s32int bcp_rcpdx;
@@ -68,17 +68,26 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 	s32int bcp_rcpdy;
 	s32int cap_rcpdy;
 
-	abp_rcpdx = rcp32(P, iabs(abp_dx));
-	bcp_rcpdx = rcp32(P, iabs(bcp_dx));
-	cap_rcpdx = rcp32(P, iabs(cap_dx));
+#if 0
+	abp_rcpdx = rcp17(P, iabs(abp_dx));
+	bcp_rcpdx = rcp17(P, iabs(bcp_dx));
+	cap_rcpdx = rcp17(P, iabs(cap_dx));
 
-	abp_rcpdy = rcp32(P, iabs(abp_dy));
-	bcp_rcpdy = rcp32(P, iabs(bcp_dy));
-	cap_rcpdy = rcp32(P, iabs(cap_dy));
+	abp_rcpdy = rcp17(P, iabs(abp_dy));
+	bcp_rcpdy = rcp17(P, iabs(bcp_dy));
+	cap_rcpdy = rcp17(P, iabs(cap_dy));
 
-	if(abp_rcpdy == -1 || bcp_rcpdy == -1 || cap_rcpdy == -1 ||
-	abp_rcpdx == -1 || bcp_rcpdx == -1 || cap_rcpdx == -1)
-		printf("got -1\n");
+#else
+
+	abp_rcpdx = abp_dx == 0 ? (1<<P) : (1<<P)/iabs(abp_dx);
+	bcp_rcpdx = bcp_dx == 0 ? (1<<P) : (1<<P)/iabs(bcp_dx);
+	cap_rcpdx = cap_dx == 0 ? (1<<P) : (1<<P)/iabs(cap_dx);
+
+	abp_rcpdy = abp_dy == 0 ? (1<<P) : (1<<P)/iabs(abp_dy);
+	bcp_rcpdy = bcp_dy == 0 ? (1<<P) : (1<<P)/iabs(bcp_dy);
+	cap_rcpdy = cap_dy == 0 ? (1<<P) : (1<<P)/iabs(cap_dy);
+
+#endif
 
 	while(dst_ustart < dst_end){
 		abp = abp_y;
@@ -88,36 +97,12 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 		dstp = dst_ustart;
 		while(dstp < dst_uend){
 			passto_if(((abp | bcp | cap) >> 31) == 0){ // less than 50%.
-#if 0
-				*dstp = color32;
-#else
-				int need_aa;
-				need_aa  = abp-abp_dx;
-				need_aa |= bcp-bcp_dx;
-				need_aa |= cap-cap_dx;
-				need_aa |= abp-abp_dy;
-				need_aa |= bcp-bcp_dy;
-				need_aa |= cap-cap_dy;
-
-				need_aa |= abp+abp_dx;
-				need_aa |= bcp+bcp_dx;
-				need_aa |= cap+cap_dx;
-				need_aa |= abp+abp_dy;
-				need_aa |= bcp+bcp_dy;
-				need_aa |= cap+cap_dy;
-
-				goto_if((need_aa>>31) == -1){ // extremely rare
-
-if(0)
-printf(
-"abp %d bcp %d cap %d "
-"abp_dx %d bcp_dx %d cap_dx %d "
-"abp_dy %d bcp_dy %d cap_dy %d "
-"\n",
-abp, bcp, cap,
-abp_dx, bcp_dx, cap_dx,
-abp_dy, bcp_dy, cap_dy
-);
+				goto_if(
+					abp-abp_dx < 0 || bcp-bcp_dx < 0 || cap-cap_dx < 0 ||
+					abp-abp_dy < 0 || bcp-bcp_dy < 0 || cap-cap_dy < 0 ||
+					abp+abp_dx < 0 || bcp+bcp_dx < 0 || cap+cap_dx < 0 ||
+					abp+abp_dy < 0 || bcp+bcp_dy < 0 || cap+cap_dy < 0
+				){
 					int tmp, xx;
 					xx = 255;
 					tmp = 255;
@@ -134,33 +119,12 @@ abp_dy, bcp_dy, cap_dy
 					tmp = mini(tmp, xx);
 					xx = (s64int)255*cap*cap_rcpdy >> P;
 					tmp = mini(tmp, xx);
-#if 0
-					if(abp_dx != 0)
-						xx = 255*abp/iabs(abp_dx);
-					tmp = mini(tmp, xx);
-					if(bcp_dx != 0)
-						xx = 255*bcp/iabs(bcp_dx);
-					tmp = mini(tmp, xx);
-					if(cap_dx != 0)
-						xx = 255*cap/iabs(cap_dx);
-					tmp = mini(tmp, xx);
-
-					if(abp_dy != 0)
-						xx = 255*abp/iabs(abp_dy);
-					tmp = mini(tmp, xx);
-					if(bcp_dy != 0)
-						xx = 255*bcp/iabs(bcp_dy);
-					tmp = mini(tmp, xx);
-					if(cap_dy != 0)
-						xx = 255*cap/iabs(cap_dy);
-					tmp = mini(tmp, xx);
-#endif
 
 					*dstp = blend32(*dstp, color32, tmp);
 				} else {
 					*dstp = color32;
 				}
-#endif
+
 			}
 			abp += abp_dx;
 			bcp += bcp_dx;
