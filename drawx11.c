@@ -252,7 +252,7 @@ addredraw(void)
 	ninputs++;
 	memset(inp, 0, sizeof inp[0]);
 	inp->mouse = -1;
-	inp->begin = Animate;
+	inp->begin = Redraw;
 }
 
 void
@@ -347,9 +347,10 @@ drawevents2(int block, Input **inepp)
 				char keystr[8] = {0};
 
 				keysym = XLookupKeysym(ep, ep->state & (ShiftMask|LockMask));
-				if((code = keysym2ucs(keysym)) == -1)
-					return 0;
-				utf8encode(keystr, sizeof keystr-1, code);
+				if((code = keysym2ucs(keysym)) != -1)
+					utf8encode(keystr, sizeof keystr-1, code);
+				else
+					keystr[0] = '\0';
 
 				switch(keysym){
 				case XK_Return:
@@ -425,15 +426,12 @@ drawevents2(int block, Input **inepp)
 					break;
 				case XK_Caps_Lock:
 					mod = KeyCapsLock;
-fprintf(stderr, "capslock!\n");
 					break;
 				default:
 					mod = 0;
 					break;
 				}
-fprintf(stderr, "drawx11 keystr '%s'\n",
-keystr
-);
+
 				addinput(
 					0, 0,
 					keystr,
@@ -509,8 +507,10 @@ keystr
 					shmfree();
 					width = ce->width;
 					height = ce->height;
-					if(shminit() == -1)
+					if(shminit() == -1){
+						*inepp = NULL;
 						return NULL;
+					}
 					addredraw();
 				}
 				continue;
@@ -531,6 +531,7 @@ keystr
 		return inputs;
 	}
 
+	*inepp = NULL;
 	return NULL;
 }
 
