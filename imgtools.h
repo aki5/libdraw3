@@ -7,8 +7,9 @@ rcp17(s32int pshift, s32int q)
 {
 	s32int tag, z;
 
-	if(q==0)
+	if(q==0){
 		return 1<<pshift;
+	}
 
 	z = 1 << (pshift-(31-__builtin_clz(q)));
 	tag = q >> ((31-2)-__builtin_clz(q));
@@ -24,6 +25,31 @@ rcp17(s32int pshift, s32int q)
 
 	return z;
 }
+
+static inline u32int
+rcp32(int pshift, u32int q)
+{
+	s32int tag;
+	s64int z;
+
+	if(q == 0){
+		return 1<<pshift;
+	}
+
+	z = ((s64int)1 << (pshift-(31-__builtin_clz(q))));
+	tag = q >> ((31-2)-__builtin_clz(q));
+	if(tag == 7)
+		z = z>>1;
+	if(tag == 5 || tag == 6 || q == 3)
+		z = (z|(z>>1))>>1;
+
+	z = z + (((z<<pshift)-q*z*z)>>pshift);
+	z = z + (((z<<pshift)-q*z*z)>>pshift);
+	z = z + (((z<<pshift)-q*z*z)>>pshift);
+
+	return z;
+}
+
 
 static inline u32int
 blend32(u32int dval, u32int sval, u32int mval)

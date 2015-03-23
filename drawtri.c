@@ -58,7 +58,7 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 		cap_y += topleft(c, a);
 	} /* else: todo.. */
 	
-	enum { P = 24 };
+	enum { Psh = 32 };
 
 	s32int abp_rcpdx;
 	s32int bcp_rcpdx;
@@ -68,26 +68,13 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 	s32int bcp_rcpdy;
 	s32int cap_rcpdy;
 
-#if 0
-	abp_rcpdx = rcp17(P, iabs(abp_dx));
-	bcp_rcpdx = rcp17(P, iabs(bcp_dx));
-	cap_rcpdx = rcp17(P, iabs(cap_dx));
+	abp_rcpdx = rcp32(Psh, iabs(abp_dx));
+	bcp_rcpdx = rcp32(Psh, iabs(bcp_dx));
+	cap_rcpdx = rcp32(Psh, iabs(cap_dx));
 
-	abp_rcpdy = rcp17(P, iabs(abp_dy));
-	bcp_rcpdy = rcp17(P, iabs(bcp_dy));
-	cap_rcpdy = rcp17(P, iabs(cap_dy));
-
-#else
-
-	abp_rcpdx = abp_dx == 0 ? (1<<P) : (1<<P)/iabs(abp_dx);
-	bcp_rcpdx = bcp_dx == 0 ? (1<<P) : (1<<P)/iabs(bcp_dx);
-	cap_rcpdx = cap_dx == 0 ? (1<<P) : (1<<P)/iabs(cap_dx);
-
-	abp_rcpdy = abp_dy == 0 ? (1<<P) : (1<<P)/iabs(abp_dy);
-	bcp_rcpdy = bcp_dy == 0 ? (1<<P) : (1<<P)/iabs(bcp_dy);
-	cap_rcpdy = cap_dy == 0 ? (1<<P) : (1<<P)/iabs(cap_dy);
-
-#endif
+	abp_rcpdy = rcp32(Psh, iabs(abp_dy));
+	bcp_rcpdy = rcp32(Psh, iabs(bcp_dy));
+	cap_rcpdy = rcp32(Psh, iabs(cap_dy));
 
 	while(dst_ustart < dst_end){
 		abp = abp_y;
@@ -106,18 +93,18 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 					int tmp, xx;
 					xx = 255;
 					tmp = 255;
-					xx = (s64int)255*abp*abp_rcpdx >> P;
+					xx = (s64int)255*abp*abp_rcpdx >> Psh;
 					tmp = mini(tmp, xx);
-					xx = (s64int)255*bcp*bcp_rcpdx >> P;
+					xx = (s64int)255*bcp*bcp_rcpdx >> Psh;
 					tmp = mini(tmp, xx);
-					xx = (s64int)255*cap*cap_rcpdx >> P;
+					xx = (s64int)255*cap*cap_rcpdx >> Psh;
 					tmp = mini(tmp, xx);
 
-					xx = (s64int)255*abp*abp_rcpdy >> P;
+					xx = (s64int)255*abp*abp_rcpdy >> Psh;
 					tmp = mini(tmp, xx);
-					xx = (s64int)255*bcp*bcp_rcpdy >> P;
+					xx = (s64int)255*bcp*bcp_rcpdy >> Psh;
 					tmp = mini(tmp, xx);
-					xx = (s64int)255*cap*cap_rcpdy >> P;
+					xx = (s64int)255*cap*cap_rcpdy >> Psh;
 					tmp = mini(tmp, xx);
 
 					*dstp = blend32(*dstp, color32, tmp);
