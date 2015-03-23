@@ -6,7 +6,7 @@ enum {
 	AnyMouse = (LastMouse<<1)-Mouse0,
 	DAnyKey = ~AnyMouse, // X11 defines AnyKey, so we can not.
 
-	Animate = 1<<9,
+	Redraw = 1<<9,
 	KeyStr = 1<<10,
 
 	KeyCapsLock = 1<<11,
@@ -66,6 +66,12 @@ ptinrect(short *uv, Rect *r)
 	if(uv[0] >= r->u0 && uv[0] < r->uend && uv[1] >= r->v0 && uv[1] < r->vend)
 		return 1;
 	return 0;
+}
+
+static inline int
+rectempty(Rect r)
+{
+	return r.u0 >= r.uend || r.v0 >= r.vend;
 }
 
 /*
@@ -181,9 +187,9 @@ keyend(Input *inp, int mask)
 }
 
 static inline int
-animate(Input *inp)
+redraw(Input *inp)
 {
-	return (inp->begin & Animate) != 0;
+	return (inp->begin & Redraw) != 0;
 }
 
 
@@ -214,7 +220,7 @@ void pixcpy_dst16(uchar *dst, uchar *src, int nbytes);
 void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 
 void initdrawstr(char *path);
-Rect drawstr(Image *img, Rect r, char *str, int len);
+Rect drawstr(Image *img, Rect r, char *str, int len, uchar *color);
 void setfontsize(int size);
 
 static inline void
