@@ -15,11 +15,11 @@ drawblend(Image *dst, Rect r, Image *src, Image *mask)
 	st = timenow();
 #endif
 
-	dst->dirty = 1;
 	dstr = cliprect(r, dst->r);
-
-	if(dstr.u0 >= dstr.uend || dstr.v0 >= dstr.vend)
+	if(rectempty(dstr))
 		return;
+
+	dst->dirty = 1;
 
 	uoff = dstr.u0-r.u0;
 	voff = dstr.v0-r.v0;
