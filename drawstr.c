@@ -155,7 +155,7 @@ freeglyph(Image *img)
 }
 
 Rect
-drawstr(Image *img, Rect rdst, char *str, int len)
+drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 {
 	Image *colim;
 	Rect rret;
@@ -165,8 +165,6 @@ drawstr(Image *img, Rect rdst, char *str, int len)
 	if(len == -1)
 		len = strlen(str);
 
-	uchar color[4];
-	idx2color(2, color);
 	colim = allocimage(rect(0,0,1,1), color);
 
 	rret.u0 = rdst.u0;
