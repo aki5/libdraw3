@@ -27,7 +27,10 @@ drawcircle(Image *dst, Rect dstr, short *p, short rad, int pscl, uchar *color)
 		dstr.vend = tmp;
 
 	dstr = cliprect(dstr, dst->r);
+	if(rectempty(dstr))
+		return;
 
+	dst->dirty = 1;
 	blend_factor = 255.0f / (float)(1<<pscl);
 
 	dst_stride = dst->stride/4;
