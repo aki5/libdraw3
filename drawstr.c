@@ -154,6 +154,12 @@ freeglyph(Image *img)
 	//freeimage(img);
 }
 
+int
+linespace(void)
+{
+	return 15*fontsize/10;
+}
+
 Rect
 drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 {
@@ -169,7 +175,9 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 
 	rret.u0 = rdst.u0;
 	rret.uend = rdst.u0;
-	rret.v0 = rdst.v0;
+
+	rret.v0 = 32767;
+	rret.vend = -32768;
 
 	for(off = 0; off < len && rdst.u0 < rdst.uend;){
 		code = utf8decode(str, &off, len);
@@ -195,6 +203,9 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 		glydst.uend = glydst.u0 + width; //rectw(&glyim->r);
 		glydst.vend = glydst.v0 + height; //recth(&glyim->r);
 
+		rret.v0 = rret.v0 < glydst.v0 ? rret.v0 : glydst.v0;
+		rret.vend = rret.vend > glydst.vend ? rret.vend : glydst.vend;
+
 		drawblend(img, glydst, colim, glyim);
 		freeglyph(glyim);
 
@@ -204,6 +215,5 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 
 	freeimage(colim);
 
-	rret.vend = rret.v0 + 15*fontsize/10;
 	return rret;
 }
