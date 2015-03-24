@@ -449,7 +449,7 @@ drawevents2(int block, Input **inepp)
 				switch(ep->button){
 				case 0:case 1:case 2:case 3:case 4:
 				case 5:case 6:case 7:case 9:case 10:
-					mod = Mouse0 + ep->button;
+					mod = Mouse0 << ep->button;
 					break;
 				default:
 					fprintf(stderr, "unsupported mouse button %d\n", ep->button);
