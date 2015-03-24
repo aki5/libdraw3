@@ -68,6 +68,7 @@ blend32(u32int dval, u32int sval, u32int mval)
 	tmp1 >>= 8;
 	tmp1 = tmp1 & 0x00ff00ff; 
 
+#if 0
 	/* green goes alone */
 	dtmp = dval & 0xff00;
 	stmp = sval & 0xff00;
@@ -79,6 +80,18 @@ blend32(u32int dval, u32int sval, u32int mval)
 	tmp2 += (tmp1>>8);
 	tmp2 >>= 8;
 	tmp2 = tmp2 & 0xff00;
+#else
+	/* multiply green and alpha at the same time */
+	dtmp = (dval>>8) & 0x00ff00ff;
+	stmp = (sval>>8) & 0x00ff00ff;
+	tmp2 = dtmp * (255-mval);
+	tmp2 += stmp * mval;
+
+	/* divide by 255 */
+	tmp2 += 0x00010001;
+	tmp2 += (tmp2>>8) & 0x00ff00ff;
+	tmp2 = tmp2 & 0xff00ff00; 
+#endif
 
 	return tmp1 | tmp2;
 }
