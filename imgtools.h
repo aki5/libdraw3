@@ -50,6 +50,30 @@ rcp32(int pshift, u32int q)
 	return z;
 }
 
+static inline u32int
+premul32(u32int sval, u32int mval)
+{
+	u32int dtmp, stmp, tmp1, tmp2;
+
+	/* multiply red and blue at the same time */
+	stmp = (sval & 0x00ff00ff) * mval;
+
+	/* div255 */
+	tmp1 += 0x00010001;
+	tmp1 += (tmp1>>8) & 0x00ff00ff;
+	tmp1 >>= 8;
+	tmp1 = tmp1 & 0x00ff00ff; 
+
+	/* multiply green */
+	stmp = (sval>>8) & 0xff;
+
+	/* div255 */
+	tmp2 += 1;
+	tmp2 += (tmp2>>8) & 0xff;
+	tmp2 = tmp2 & 0xff00; 
+
+	return tmp1 | tmp2 | (mval<<24);
+}
 
 static inline u32int
 blend32(u32int dval, u32int sval, u32int mval)
@@ -59,7 +83,7 @@ blend32(u32int dval, u32int sval, u32int mval)
 	/* multiply red and blue at the same time */
 	dtmp = dval & 0x00ff00ff;
 	stmp = sval & 0x00ff00ff;
-	tmp1 = dtmp * (255-mval);
+	tmp1 = dtmp * 255; //(255-mval);
 	tmp1 += stmp * mval;
 
 	/* divide by 255 */
@@ -68,30 +92,16 @@ blend32(u32int dval, u32int sval, u32int mval)
 	tmp1 >>= 8;
 	tmp1 = tmp1 & 0x00ff00ff; 
 
-#if 0
-	/* green goes alone */
-	dtmp = dval & 0xff00;
-	stmp = sval & 0xff00;
-	tmp2 = dtmp * (255-mval);
-	tmp2 += stmp * mval;
-
-	/* divide by 255 */
-	tmp2 += 0x0100;
-	tmp2 += (tmp1>>8);
-	tmp2 >>= 8;
-	tmp2 = tmp2 & 0xff00;
-#else
 	/* multiply green and alpha at the same time */
 	dtmp = (dval>>8) & 0x00ff00ff;
 	stmp = (sval>>8) & 0x00ff00ff;
-	tmp2 = dtmp * (255-mval);
+	tmp2 = dtmp * 255; //(255-mval);
 	tmp2 += stmp * mval;
 
 	/* divide by 255 */
 	tmp2 += 0x00010001;
 	tmp2 += (tmp2>>8) & 0x00ff00ff;
 	tmp2 = tmp2 & 0xff00ff00; 
-#endif
 
 	return tmp1 | tmp2;
 }

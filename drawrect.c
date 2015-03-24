@@ -72,7 +72,10 @@ drawblend(Image *dst, Rect r, Image *src, Image *mask)
 			/* the secret to fast alpha blending is avoiding it */
 			mval = *maskp >> 24;
 			goto_if(mval-1 < 254){
-				*dstp = blend32(*dstp, *srcp, mval);
+				u32int sval;
+				//sval = premul32(*srcp, mval);
+				sval = *srcp;
+				*dstp = blend32(*dstp, sval, mval);
 			} else if(mval == 255){
 				*dstp = *srcp;
 			}

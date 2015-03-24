@@ -40,46 +40,6 @@ Image screen;
 long keysym2ucs(KeySym key);
 
 static int
-utf8encode(char *str, int cap, int code)
-{
-	uchar *s;
-	int len;
-
-	s = (uchar *)str;
-	if(code <= 0x7f){
-		if(cap < 2) return 0;
-		s[0] = code;
-		s[1] = '\0';
-		len = 1;
-	} else if(code <= 0x7ff){
-		if(cap < 3) return 0;
-		s[0] = 0xc0|((code>>6)&0x1f);
-		s[1] = 0x80|((code>>0)&0x3f);
-		s[2] = '\0';
-		len = 2;
-	} else if(code <= 0xfff){
-		if(cap < 4) return 0;
-		s[0] = 0xe0|((code>>12)&0x0f);
-		s[1] = 0x80|((code>>6)&0x3f);
-		s[2] = 0x80|((code>>0)&0x3f);
-		s[3] = '\0';
-		len = 3;
-	} else if(code <= 0x1fffff){
-		if(cap < 5) return 0;
-		s[0] = 0xf0|((code>>18)&0x07);
-		s[1] = 0x80|((code>>12)&0x3f);
-		s[2] = 0x80|((code>>6)&0x3f);
-		s[3] = 0x80|((code>>0)&0x3f);
-		s[4] = '\0';
-		len = 4;
-	} else {
-		fprintf(stderr, "unicode U%x sequence out of supported range\n", code); 
-		return 0; /* fail */
-	}
-	return len;
-}
-
-static int
 shminit(void)
 {
 	shmimage = XShmCreateImage(
@@ -356,11 +316,13 @@ drawevents2(int block, Input **inepp)
 				case XK_Return:
 				case XK_KP_Enter:
 					strncpy(keystr, "\n", sizeof keystr-1);
-					mod = KeyEnter;
+					mod = KeyStr;
 					break;
 				case XK_Tab:
+				case XK_KP_Tab:
+				case XK_ISO_Left_Tab:
 					strncpy(keystr, "\t", sizeof keystr-1);
-					mod = KeyTab;
+					mod = KeyStr;
 					break;
 				case XK_Break:
 					mod = KeyBreak;

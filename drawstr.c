@@ -7,32 +7,71 @@
 static FT_Library library;
 static FT_Face face;
 static int libinit;
-static int fontsize = 20;
+static int fontsize = 10;
 
-static int
+int
 utf8decode(char *str, int *offp, int len)
 {
-	int off, left;
+	int off;
 	uchar *s;
 
 	s = (uchar *)str;
-	off = *offp;
-	left = len - off;
-	if(left >= 1 && s[off] <= 0x7f){ /* 0111 1111 */
-		*offp = off + 1;
-		return s[off];
-	} else if(left >= 2 && s[off] <= 0xdf){ /* 1101 1111 */
-		*offp = off + 2;
-		return ((s[off]&0x1f)<<6)|(s[off+1]&0x3f);
-	} else if(left >= 3 && s[off] <= 0xef){ /* 1110 1111 */
-		*offp = off + 3;
-		return ((s[off]&0x0f)<<12)|((s[off+1]&0x3f)<<6)|(s[off+2]&0x3f);
-	} else if(left >= 4 && s[off] <= 0xf7){ /* 1111 0111 */
-		*offp = off + 4;
-		return ((s[off]&0x07)<<18)|((s[off+1]&0x3f)<<12)|((s[off+2]&0x3f)<<6)|(s[off+3]&0x3f);
+	if(len >= 1 && s[0] <= 0x7f){ /* 0111 1111 */
+		*offp = 1;
+		return s[0];
+	} else if(len >= 2 && s[0] <= 0xdf){ /* 1101 1111 */
+		*offp = 2;
+		return ((s[0]&0x1f)<<6)|(s[1]&0x3f);
+	} else if(len >= 3 && s[0] <= 0xef){ /* 1110 1111 */
+		*offp = 3;
+		return ((s[0]&0x0f)<<12)|((s[1]&0x3f)<<6)|(s[2]&0x3f);
+	} else if(len >= 4 && s[0] <= 0xf7){ /* 1111 0111 */
+		*offp = 4;
+		return ((s[0]&0x07)<<18)|((s[1]&0x3f)<<12)|((s[2]&0x3f)<<6)|(s[3]&0x3f);
 	}
 
+	*offp = 0;
 	return -1;
+}
+
+int
+utf8encode(char *str, int cap, int code)
+{
+	uchar *s;
+	int len;
+
+	s = (uchar *)str;
+	if(code <= 0x7f){
+		if(cap < 2) return 0;
+		s[0] = code;
+		s[1] = '\0';
+		len = 1;
+	} else if(code <= 0x7ff){
+		if(cap < 3) return 0;
+		s[0] = 0xc0|((code>>6)&0x1f);
+		s[1] = 0x80|((code>>0)&0x3f);
+		s[2] = '\0';
+		len = 2;
+	} else if(code <= 0xfff){
+		if(cap < 4) return 0;
+		s[0] = 0xe0|((code>>12)&0x0f);
+		s[1] = 0x80|((code>>6)&0x3f);
+		s[2] = 0x80|((code>>0)&0x3f);
+		s[3] = '\0';
+		len = 3;
+	} else if(code <= 0x1fffff){
+		if(cap < 5) return 0;
+		s[0] = 0xf0|((code>>18)&0x07);
+		s[1] = 0x80|((code>>12)&0x3f);
+		s[2] = 0x80|((code>>6)&0x3f);
+		s[3] = 0x80|((code>>0)&0x3f);
+		s[4] = '\0';
+		len = 4;
+	} else {
+		fprintf(stderr, "unicode U%x sequence out of supported range\n", code); 
+		return 0; /* fail */
+	}
+	return len;
 }
 
 void
@@ -42,7 +81,10 @@ initdrawstr(char *path)
 		FT_Init_FreeType(&library);
 	FT_New_Face(library, path, 0, &face);
 	//FT_Library_SetLcdFilter(library, FT_LCD_FILTER_DEFAULT);
-	FT_Set_Char_Size(face, fontsize<<6, 0, 100, 0); /* 50pt, 100dpi, whatever */
+	FT_Set_Char_Size(face, fontsize<<6, 0, 72, 0); /* 50pt, 72dpi, whatever */
+	fprintf(stderr, "face: ascender %d descender %d height %d\n",
+		(face->size->metrics.ascender), (face->size->metrics.descender), (face->size->metrics.height));
+	
 }
 
 Image *
@@ -128,7 +170,7 @@ glyphsetup(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp, sho
 	loadimage8(glyim, rgly, face->glyph->bitmap.buffer, face->glyph->bitmap.width);
 
 	*uoffp = face->glyph->bitmap_left;
-	*voffp = -face->glyph->bitmap_top;
+	*voffp = (face->size->metrics.ascender>>6)-face->glyph->bitmap_top;
 	*uadvp = face->glyph->advance.x>>6;
 	*vadvp = face->glyph->bitmap.rows + face->glyph->bitmap_top;
 	*width = face->glyph->bitmap.width;
@@ -157,7 +199,49 @@ freeglyph(Image *img)
 int
 linespace(void)
 {
-	return 15*fontsize/10;
+	return (face->size->metrics.height+63)/64;
+	//return 15*fontsize/10;
+}
+
+int
+fontem(void)
+{
+	return face->size->metrics.x_ppem;
+}
+
+Rect
+drawchar(Image *img, Rect rdst, int code, Image *color)
+{
+	Image *glyim;
+	Rect rret;
+	int off;
+	short uoff, voff, uadv, vadv, width, height;
+
+
+	rret.u0 = rdst.u0;
+	rret.uend = rdst.u0;
+
+	rret.v0 = rdst.v0;
+	rret.vend = rdst.v0 + (face->size->metrics.height+63)/64;
+
+	glyim = glyphsetup(code, &uoff, &voff, &uadv, &vadv, &width, &height);
+	if(glyim == NULL)
+		goto out;
+
+	Rect glydst;
+	glydst.u0 = rdst.u0 + uoff;
+	glydst.v0 = rdst.v0 + voff;
+	glydst.uend = glydst.u0 + width;
+	glydst.vend = glydst.v0 + height;
+
+	drawblend(img, cliprect(rdst, glydst), color, glyim);
+	freeglyph(glyim);
+
+	rdst.u0 += uadv;
+	rret.uend += uadv;
+	
+out:
+	return rret;
 }
 
 Rect
@@ -176,19 +260,24 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 	rret.u0 = rdst.u0;
 	rret.uend = rdst.u0;
 
-	rret.v0 = 32767;
-	rret.vend = -32768;
+	rret.v0 = rdst.v0;
+	rret.vend = rdst.v0 + (face->size->metrics.height+63)/64;
 
 	for(off = 0; off < len && rdst.u0 < rdst.uend;){
-		code = utf8decode(str, &off, len);
+		int doff;
+		code = utf8decode(str+off, &doff, len-off);
 		if(code == -1){
 			off++;
 			continue;
+		} else {
+			off += doff;
 		}
 
+		if(code == '\n')
+			continue;
 		if(code == '\t'){
-			rdst.u0 += 50;
-			rret.uend += 50;
+			rdst.u0 += 3 * face->size->metrics.x_ppem;
+			rret.uend += 3 * face->size->metrics.x_ppem;
 			continue;
 		}
 

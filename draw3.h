@@ -122,7 +122,7 @@ cliprect(Rect r, Rect cr)
 	if(r.v0 > cr.vend)
 		r.v0 = cr.vend;
 
-	if(r.uend < cr.v0)
+	if(r.uend < cr.u0)
 		r.uend = cr.u0;
 	if(r.vend < cr.v0)
 		r.vend = cr.v0;
@@ -233,8 +233,15 @@ void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 
 void initdrawstr(char *path);
 int linespace(void);
+
 Rect drawstr(Image *img, Rect r, char *str, int len, uchar *color);
+Rect drawchar(Image *img, Rect rdst, int code, Image *color);
+
 void setfontsize(int size);
+int fontem(void);
+
+int utf8decode(char *str, int *offp, int len);
+int utf8encode(char *str, int cap, int code);
 
 static inline void
 drawpixel(Image *img, short *pt, uchar *color)
