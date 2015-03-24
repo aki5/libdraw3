@@ -2,6 +2,14 @@
 enum {
 	MaxMouse = 8,
 	Mouse0 = 1<<0,
+	Mouse1 = Mouse0<<1,
+	Mouse2 = Mouse0<<2,
+	Mouse3 = Mouse0<<3,
+	Mouse4 = Mouse0<<4,
+	Mouse5 = Mouse0<<5,
+	Mouse6 = Mouse0<<6,
+	Mouse7 = Mouse0<<7,
+	Mouse8 = Mouse0<<8,
 	LastMouse = Mouse0<<MaxMouse,
 	AnyMouse = (LastMouse<<1)-Mouse0,
 	DAnyKey = ~AnyMouse, // X11 defines AnyKey, so we can not.
@@ -130,6 +138,8 @@ cliprect(Rect r, Rect cr)
 static inline int
 rectisect(Rect a, Rect b)
 {
+	if(rectempty(a) || rectempty(b))
+		return 0;
 	return a.u0 < b.uend && b.u0 < a.uend && a.v0 < b.vend && b.v0 < a.vend;
 }
 
@@ -211,15 +221,18 @@ int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly,
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
 void drawblend(Image *dst, Rect r, Image *src, Image *mask);
+void drawblend_back(Image *dst, Rect r, Image *src);
 
 void drawanimate(int flag);
 void loadimage8(Image *img, Rect clipr, uchar *data, int stride);
+Image *allocimage(Rect r, uchar *color);
 
 void pixset(uchar *dst, uchar *val, int len);
 void pixcpy_dst16(uchar *dst, uchar *src, int nbytes);
 void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 
 void initdrawstr(char *path);
+int linespace(void);
 Rect drawstr(Image *img, Rect r, char *str, int len, uchar *color);
 void setfontsize(int size);
 

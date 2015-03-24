@@ -10,11 +10,6 @@ drawblend(Image *dst, Rect r, Image *src, Image *mask)
 	Rect dstr;
 	int uoff, voff;
 
-#if 0
-	double st, et;
-	st = timenow();
-#endif
-
 	dstr = cliprect(r, dst->r);
 	if(rectempty(dstr))
 		return;
@@ -93,13 +88,79 @@ drawblend(Image *dst, Rect r, Image *src, Image *mask)
 		dst_ustart += dst_stride;
 		dst_uend += dst_stride;
 	}
+}
 
-#if 0
-	et = timenow();
-int nbytes = 4*rectw(&dstr)*recth(&dstr);
-if(fmod(et, 1.0) < 0.1)
-fprintf(stderr, "drawblend %d bytes, %.2f MB/s\n", nbytes, 1e-6*nbytes/(et-st));
-#endif
+void
+drawblend_back(Image *dst, Rect r, Image *src)
+{
+	Rect dstr;
+	int uoff, voff;
+
+	dstr = cliprect(r, dst->r);
+	if(rectempty(dstr))
+		return;
+
+	dst->dirty = 1;
+
+	uoff = dstr.u0-r.u0;
+	voff = dstr.v0-r.v0;
+
+	u32int *dstp, *srcp;
+	u32int *src_vstart;
+	u32int *dst_end, *src_end;
+	int src_uendoff;
+	int dst_stride, src_stride;
+	u32int *dst_ustart, *src_ustart;
+	u32int *dst_uend, *src_uend;
+	u32int mval;
+
+	src_vstart = img_vstart(src, uoff);
+
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
+	src_ustart = img_uvstart(src, uoff, voff);
+
+	__builtin_prefetch(dst_ustart);
+	__builtin_prefetch(src_ustart);
+	__builtin_prefetch(dst_ustart+8);
+	__builtin_prefetch(src_ustart+8);
+
+	dst_stride = dst->stride/4;
+	src_stride = src->stride/4;
+
+	dst_end = dst_ustart + recth(&dstr)*dst_stride;
+	src_end = img_end(src);
+
+	dst_uend = dst_ustart + rectw(&dstr);
+	src_uendoff = rectw(&src->r) - uoff;
+
+	while(dst_ustart < dst_end){
+
+		srcp = src_ustart;
+		src_uend = src_ustart + src_uendoff;
+
+		dstp = dst_ustart;
+		while(dstp < dst_uend){
+
+			__builtin_prefetch(dstp+16);
+			__builtin_prefetch(srcp+16);
+
+			/* the secret to fast alpha blending is avoiding it */
+			mval = 255-(*dstp >> 24);
+			goto_if(mval-1 < 254){
+				*dstp = blend32(*dstp, *srcp, mval);
+			} else if(mval == 255){
+				*dstp = *srcp;
+			}
+
+			add_wrap(srcp, 1, src_ustart, src_uend);
+			dstp++;
+		}
+
+		add_wrap(src_ustart, src_stride, src_vstart, src_end);
+
+		dst_ustart += dst_stride;
+		dst_uend += dst_stride;
+	}
 }
 
 void
