@@ -40,6 +40,15 @@ enum {
 	KeyUp = 1<<31,
 };
 
+enum {
+	BlendOver = 1,
+	BlendUnder,
+	BlendSub,
+	BlendMask,
+	BlendRsub,
+	BlendRmask,
+};
+
 typedef struct Rect Rect;
 typedef struct Image Image;
 typedef struct Input Input;
@@ -143,6 +152,20 @@ rectisect(Rect a, Rect b)
 	return a.u0 < b.uend && b.u0 < a.uend && a.v0 < b.vend && b.v0 < a.vend;
 }
 
+static inline Rect
+insetrect(Rect r, int border)
+{
+	r.u0 += border;
+	r.v0 += border;
+	r.uend -= border;
+	r.vend -= border;
+	if(r.uend < r.u0)
+		r.uend = r.u0;
+	if(r.vend < r.v0)
+		r.vend = r.v0;
+	return r;
+}
+
 static inline int rectw(Rect *r){ return r->uend-r->u0; }
 static inline int recth(Rect *r){ return r->vend-r->v0; }
 static inline void rectmidpt(Rect *r, short *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
@@ -222,10 +245,8 @@ void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int
 void drawrect(Image *img, Rect r, uchar *color);
 
 void blend(Image *dst, Rect r, Image *src, Image *mask);
+void blend2(Image *dst, Rect r, Image *src, int opcode);
 
-void blend_add_over(Image *dst, Rect r, Image *src);
-void blend_add_under(Image *dst, Rect r, Image *src);
-void blend_sub(Image *dst, Rect r, Image *src);
 
 
 void drawanimate(int flag);
@@ -239,7 +260,7 @@ void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 void initdrawstr(char *path);
 int linespace(void);
 
-Rect drawstr(Image *img, Rect r, char *str, int len, uchar *color);
+Rect drawstr(Image *img, Rect r, char *str, int len, Image *color);
 Rect drawchar(Image *img, Rect rdst, int code, Image *color);
 
 void setfontsize(int size);
