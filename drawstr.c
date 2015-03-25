@@ -218,13 +218,11 @@ drawchar(Image *img, Rect rdst, int code, Image *color)
 	int off;
 	short uoff, voff, uadv, vadv, width, height;
 
-
 	rret.u0 = rdst.u0;
 	rret.uend = rdst.u0;
 
 	rret.v0 = rdst.v0;
 	rret.vend = rdst.v0 + linespace();
-
 
 	glyim = glyphsetup(code, &uoff, &voff, &uadv, &vadv, &width, &height);
 	if(glyim == NULL)
@@ -235,14 +233,7 @@ drawchar(Image *img, Rect rdst, int code, Image *color)
 	glydst.v0 = rdst.v0 + voff;
 	glydst.uend = glydst.u0 + width;
 	glydst.vend = glydst.v0 + height;
-if(0){
-if(glydst.v0 < rdst.v0)
-printf("vertical underflow '%x' glydst %d,%d rdst %d,%d\n", code, glydst.v0, glydst.vend, rdst.v0, rdst.vend);
-if(glydst.vend > rdst.vend)
-printf("vertical overflow '%x' glydst %d,%d rdst %d,%d\n", code, glydst.v0, glydst.vend, rdst.v0, rdst.vend);
-}
 	blend(img, glydst, color, glyim);
-//	drawblend(img, cliprect(glydst, rdst), color, glyim);
 	freeglyph(glyim);
 
 	rret.uend += uadv;
@@ -251,17 +242,14 @@ out:
 }
 
 Rect
-drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
+drawstr(Image *img, Rect rdst, char *str, int len, Image *color)
 {
-	Image *colim;
 	Rect rret;
 	int off, code;
 	short uoff, voff, uadv, vadv, width, height;
 
 	if(len == -1)
 		len = strlen(str);
-
-	colim = allocimage(rect(0,0,1,1), color);
 
 	rret.u0 = rdst.u0;
 	rret.uend = rdst.u0;
@@ -278,37 +266,20 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 		} else {
 			off += doff;
 		}
-
 		if(code == '\n')
 			continue;
 		if(code == '\t'){
-			rdst.u0 += 3 * face->size->metrics.x_ppem;
-			rret.uend += 3 * face->size->metrics.x_ppem;
+			rdst.u0 += 3 * fontem();
+			rret.uend += 3 * fontem();
 			continue;
 		}
 
-		Image *glyim;
-		glyim = glyphsetup(code, &uoff, &voff, &uadv, &vadv, &width, &height);
-		if(glyim == NULL)
-			continue;
-
-		Rect glydst;
-		glydst.u0 = rdst.u0 + uoff;
-		glydst.v0 = rdst.v0 + voff;
-		glydst.uend = glydst.u0 + width; //rectw(&glyim->r);
-		glydst.vend = glydst.v0 + height; //recth(&glyim->r);
-
-		rret.v0 = rret.v0 < glydst.v0 ? rret.v0 : glydst.v0;
-		rret.vend = rret.vend > glydst.vend ? rret.vend : glydst.vend;
-
-		blend(img, glydst, colim, glyim);
-		freeglyph(glyim);
-
-		rdst.u0 += uadv;
-		rret.uend += uadv;
+		Rect tr;
+		tr = drawchar(img, rdst, code, color);
+		rret.u0 += rectw(&tr);
+		rdst.u0 = tr.uend;
 	}
 
-	freeimage(colim);
 out:
 	return rret;
 }
