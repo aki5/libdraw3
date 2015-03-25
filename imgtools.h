@@ -58,7 +58,7 @@ blend32(u32int dval, u32int sval, u32int mval)
 	/* multiply red and blue at the same time */
 	dtmp = dval & 0x00ff00ff;
 	stmp = sval & 0x00ff00ff;
-	tmp1 = dtmp * 255; //(255-mval);
+	tmp1 = dtmp * 255;
 	tmp1 += stmp * mval;
 
 	/* divide by 255 */
@@ -70,7 +70,7 @@ blend32(u32int dval, u32int sval, u32int mval)
 	/* multiply green and alpha at the same time */
 	dtmp = (dval>>8) & 0x00ff00ff;
 	stmp = (sval>>8) & 0x00ff00ff;
-	tmp2 = dtmp * 255; //(255-mval);
+	tmp2 = dtmp * 255;
 	tmp2 += stmp * mval;
 
 	/* divide by 255 */
@@ -79,6 +79,30 @@ blend32(u32int dval, u32int sval, u32int mval)
 	tmp2 = tmp2 & 0xff00ff00; 
 
 	return tmp1 | tmp2;
+}
+
+static inline u32int
+blend32_over(u32int dval, u32int sval)
+{
+	u32int mval;
+	mval = 255 - (dval >> 24);
+	return blend32(dval, sval, mval);
+}
+
+static inline u32int
+blend32_sub(u32int dval, u32int sval)
+{
+	u32int mval;
+	mval = 255 - (sval >> 24);
+	return blend32(0, dval, mval);
+}
+
+static inline u32int
+blend32_mask(u32int dval, u32int sval)
+{
+	u32int mval;
+	mval = sval >> 24;
+	return blend32(0, dval, mval);
 }
 
 static inline u32int *
