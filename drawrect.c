@@ -5,7 +5,7 @@
 #define add_wrap(ptr, d, start, end) ptr = ptr+d; ptr = ptr < end ? ptr : start
 
 void
-drawblend(Image *dst, Rect r, Image *src, Image *mask)
+blend(Image *dst, Rect r, Image *src0, Image *src1)
 {
 	Rect dstr;
 	int uoff, voff;
@@ -19,74 +19,71 @@ drawblend(Image *dst, Rect r, Image *src, Image *mask)
 	uoff = dstr.u0-r.u0;
 	voff = dstr.v0-r.v0;
 
-	u32int *dstp, *srcp, *maskp;
-	u32int *src_vstart, *mask_vstart;
-	u32int *dst_end, *src_end, *mask_end;
-	int src_uendoff, mask_uendoff;
-	int dst_stride, src_stride, mask_stride;
-	u32int *dst_ustart, *src_ustart, *mask_ustart;
-	u32int *dst_uend, *src_uend, *mask_uend;
+	u32int *dstp, *src0p, *src1p;
+	u32int *src0_vstart, *src1_vstart;
+	u32int *dst_end, *src0_end, *src1_end;
+	int src0_uendoff, src1_uendoff;
+	int dst_stride, src0_stride, src1_stride;
+	u32int *dst_ustart, *src0_ustart, *src1_ustart;
+	u32int *dst_uend, *src0_uend, *src1_uend;
 	u32int mval;
 
-	src_vstart = img_vstart(src, uoff);
-	mask_vstart = img_vstart(mask, uoff);
+	src0_vstart = img_vstart(src0, uoff);
+	src1_vstart = img_vstart(src1, uoff);
 
 	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
-	src_ustart = img_uvstart(src, uoff, voff);
-	mask_ustart = img_uvstart(mask, uoff, voff);
+	src0_ustart = img_uvstart(src0, uoff, voff);
+	src1_ustart = img_uvstart(src1, uoff, voff);
 
 	__builtin_prefetch(dst_ustart);
-	__builtin_prefetch(src_ustart);
-	__builtin_prefetch(mask_ustart);
+	__builtin_prefetch(src0_ustart);
+	__builtin_prefetch(src1_ustart);
 	__builtin_prefetch(dst_ustart+8);
-	__builtin_prefetch(src_ustart+8);
-	__builtin_prefetch(mask_ustart+8);
+	__builtin_prefetch(src0_ustart+8);
+	__builtin_prefetch(src1_ustart+8);
 
 	dst_stride = dst->stride/4;
-	src_stride = src->stride/4;
-	mask_stride = mask->stride/4;
+	src0_stride = src0->stride/4;
+	src1_stride = src1->stride/4;
 
 	dst_end = dst_ustart + recth(&dstr)*dst_stride;
-	src_end = img_end(src);
-	mask_end = img_end(mask);
+	src0_end = img_end(src0);
+	src1_end = img_end(src1);
 
 	dst_uend = dst_ustart + rectw(&dstr);
-	src_uendoff = rectw(&src->r) - uoff;
-	mask_uendoff = rectw(&mask->r) - uoff;
+	src0_uendoff = rectw(&src0->r) - uoff;
+	src1_uendoff = rectw(&src1->r) - uoff;
 
 	while(dst_ustart < dst_end){
 
-		maskp = mask_ustart;
-		mask_uend = mask_ustart + mask_uendoff;
+		src1p = src1_ustart;
+		src1_uend = src1_ustart + src1_uendoff;
 
-		srcp = src_ustart;
-		src_uend = src_ustart + src_uendoff;
+		src0p = src0_ustart;
+		src0_uend = src0_ustart + src0_uendoff;
 
 		dstp = dst_ustart;
 		while(dstp < dst_uend){
 
 			__builtin_prefetch(dstp+16);
-			__builtin_prefetch(srcp+16);
-			__builtin_prefetch(maskp+16);
+			__builtin_prefetch(src0p+16);
+			__builtin_prefetch(src1p+16);
 
 			/* the secret to fast alpha blending is avoiding it */
-			mval = *maskp >> 24;
+			mval = *src1p >> 24;
 			goto_if(mval-1 < 254){
-				u32int sval;
-				//sval = premul32(*srcp, mval);
-				sval = *srcp;
-				*dstp = blend32(*dstp, sval, mval);
+				*dstp = blend32(*dstp, *src0p, mval);
 			} else if(mval == 255){
-				*dstp = *srcp;
+				*dstp = *src0p;
 			}
 
-			add_wrap(maskp, 1, mask_ustart, mask_uend);
-			add_wrap(srcp, 1, src_ustart, src_uend);
+			add_wrap(src1p, 1, src1_ustart, src1_uend);
+			add_wrap(src0p, 1, src0_ustart, src0_uend);
 			dstp++;
 		}
 
-		add_wrap(mask_ustart, mask_stride, mask_vstart, mask_end);
-		add_wrap(src_ustart, src_stride, src_vstart, src_end);
+		add_wrap(src1_ustart, src1_stride, src1_vstart, src1_end);
+		add_wrap(src0_ustart, src0_stride, src0_vstart, src0_end);
 
 		dst_ustart += dst_stride;
 		dst_uend += dst_stride;
@@ -94,7 +91,7 @@ drawblend(Image *dst, Rect r, Image *src, Image *mask)
 }
 
 void
-drawblend_back(Image *dst, Rect r, Image *src)
+blend_add_over(Image *dst, Rect r, Image *src0)
 {
 	Rect dstr;
 	int uoff, voff;
@@ -108,63 +105,210 @@ drawblend_back(Image *dst, Rect r, Image *src)
 	uoff = dstr.u0-r.u0;
 	voff = dstr.v0-r.v0;
 
-	u32int *dstp, *srcp;
-	u32int *src_vstart;
-	u32int *dst_end, *src_end;
-	int src_uendoff;
-	int dst_stride, src_stride;
-	u32int *dst_ustart, *src_ustart;
-	u32int *dst_uend, *src_uend;
+	u32int *dstp, *src0p;
+	u32int *src0_vstart;
+	u32int *dst_end, *src0_end;
+	int src0_uendoff;
+	int dst_stride, src0_stride;
+	u32int *dst_ustart, *src0_ustart;
+	u32int *dst_uend, *src0_uend;
 	u32int mval;
 
-	src_vstart = img_vstart(src, uoff);
+	src0_vstart = img_vstart(src0, uoff);
 
 	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
-	src_ustart = img_uvstart(src, uoff, voff);
+	src0_ustart = img_uvstart(src0, uoff, voff);
 
 	__builtin_prefetch(dst_ustart);
-	__builtin_prefetch(src_ustart);
+	__builtin_prefetch(src0_ustart);
 	__builtin_prefetch(dst_ustart+8);
-	__builtin_prefetch(src_ustart+8);
+	__builtin_prefetch(src0_ustart+8);
 
 	dst_stride = dst->stride/4;
-	src_stride = src->stride/4;
+	src0_stride = src0->stride/4;
 
 	dst_end = dst_ustart + recth(&dstr)*dst_stride;
-	src_end = img_end(src);
+	src0_end = img_end(src0);
 
 	dst_uend = dst_ustart + rectw(&dstr);
-	src_uendoff = rectw(&src->r) - uoff;
+	src0_uendoff = rectw(&src0->r) - uoff;
 
 	while(dst_ustart < dst_end){
 
-		srcp = src_ustart;
-		src_uend = src_ustart + src_uendoff;
+		src0p = src0_ustart;
+		src0_uend = src0_ustart + src0_uendoff;
 
 		dstp = dst_ustart;
 		while(dstp < dst_uend){
 
 			__builtin_prefetch(dstp+16);
-			__builtin_prefetch(srcp+16);
+			__builtin_prefetch(src0p+16);
 
 			/* the secret to fast alpha blending is avoiding it */
-			mval = 255-(*dstp >> 24);
+			mval = *src0p >> 24;
 			goto_if(mval-1 < 254){
-				*dstp = blend32(*dstp, *srcp, mval);
-			} else if(mval == 255){
-				*dstp = *srcp;
+				*dstp = blend32(*dstp, *src0p, 255-mval);
+			} else if(mval == 0){
+				*dstp = *src0p;
 			}
 
-			add_wrap(srcp, 1, src_ustart, src_uend);
+			add_wrap(src0p, 1, src0_ustart, src0_uend);
 			dstp++;
 		}
 
-		add_wrap(src_ustart, src_stride, src_vstart, src_end);
+		add_wrap(src0_ustart, src0_stride, src0_vstart, src0_end);
 
 		dst_ustart += dst_stride;
 		dst_uend += dst_stride;
 	}
 }
+
+void
+blend_add_under(Image *dst, Rect r, Image *src0)
+{
+	Rect dstr;
+	int uoff, voff;
+
+	dstr = cliprect(r, dst->r);
+	if(rectempty(dstr))
+		return;
+
+	dst->dirty = 1;
+
+	uoff = dstr.u0-r.u0;
+	voff = dstr.v0-r.v0;
+
+	u32int *dstp, *src0p;
+	u32int *src0_vstart;
+	u32int *dst_end, *src0_end;
+	int src0_uendoff;
+	int dst_stride, src0_stride;
+	u32int *dst_ustart, *src0_ustart;
+	u32int *dst_uend, *src0_uend;
+	u32int mval;
+
+	src0_vstart = img_vstart(src0, uoff);
+
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
+	src0_ustart = img_uvstart(src0, uoff, voff);
+
+	__builtin_prefetch(dst_ustart);
+	__builtin_prefetch(src0_ustart);
+	__builtin_prefetch(dst_ustart+8);
+	__builtin_prefetch(src0_ustart+8);
+
+	dst_stride = dst->stride/4;
+	src0_stride = src0->stride/4;
+
+	dst_end = dst_ustart + recth(&dstr)*dst_stride;
+	src0_end = img_end(src0);
+
+	dst_uend = dst_ustart + rectw(&dstr);
+	src0_uendoff = rectw(&src0->r) - uoff;
+
+	while(dst_ustart < dst_end){
+
+		src0p = src0_ustart;
+		src0_uend = src0_ustart + src0_uendoff;
+
+		dstp = dst_ustart;
+		while(dstp < dst_uend){
+
+			__builtin_prefetch(dstp+16);
+			__builtin_prefetch(src0p+16);
+
+			/* the secret to fast alpha blending is avoiding it */
+			mval = *dstp >> 24;
+			goto_if(mval-1 < 254){
+				*dstp = blend32(*dstp, *src0p, 255-mval);
+			} else if(mval == 0){
+				*dstp = *src0p;
+			}
+
+			add_wrap(src0p, 1, src0_ustart, src0_uend);
+			dstp++;
+		}
+
+		add_wrap(src0_ustart, src0_stride, src0_vstart, src0_end);
+
+		dst_ustart += dst_stride;
+		dst_uend += dst_stride;
+	}
+}
+
+void
+blend_sub(Image *dst, Rect r, Image *src0)
+{
+	Rect dstr;
+	int uoff, voff;
+
+	dstr = cliprect(r, dst->r);
+	if(rectempty(dstr))
+		return;
+
+	dst->dirty = 1;
+
+	uoff = dstr.u0-r.u0;
+	voff = dstr.v0-r.v0;
+
+	u32int *dstp, *src0p;
+	u32int *src0_vstart;
+	u32int *dst_end, *src0_end;
+	int src0_uendoff;
+	int dst_stride, src0_stride;
+	u32int *dst_ustart, *src0_ustart;
+	u32int *dst_uend, *src0_uend;
+	u32int mval;
+
+	src0_vstart = img_vstart(src0, uoff);
+
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
+	src0_ustart = img_uvstart(src0, uoff, voff);
+
+	__builtin_prefetch(dst_ustart);
+	__builtin_prefetch(src0_ustart);
+	__builtin_prefetch(dst_ustart+8);
+	__builtin_prefetch(src0_ustart+8);
+
+	dst_stride = dst->stride/4;
+	src0_stride = src0->stride/4;
+
+	dst_end = dst_ustart + recth(&dstr)*dst_stride;
+	src0_end = img_end(src0);
+
+	dst_uend = dst_ustart + rectw(&dstr);
+	src0_uendoff = rectw(&src0->r) - uoff;
+
+	while(dst_ustart < dst_end){
+
+		src0p = src0_ustart;
+		src0_uend = src0_ustart + src0_uendoff;
+
+		dstp = dst_ustart;
+		while(dstp < dst_uend){
+
+			__builtin_prefetch(dstp+16);
+			__builtin_prefetch(src0p+16);
+
+			/* the secret to fast alpha blending is avoiding it */
+			mval = *src0p >> 24;
+			goto_if(mval-1 < 254){
+				*dstp = blend32(*dstp, 0, 255-mval);
+			} else if(mval == 255){
+				*dstp = 0;
+			}
+
+			add_wrap(src0p, 1, src0_ustart, src0_uend);
+			dstp++;
+		}
+
+		add_wrap(src0_ustart, src0_stride, src0_vstart, src0_end);
+
+		dst_ustart += dst_stride;
+		dst_uend += dst_stride;
+	}
+}
+
 
 void
 drawrect(Image *dst, Rect r, uchar *color)

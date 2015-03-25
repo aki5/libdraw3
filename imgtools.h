@@ -51,31 +51,6 @@ rcp32(int pshift, u32int q)
 }
 
 static inline u32int
-premul32(u32int sval, u32int mval)
-{
-	u32int dtmp, stmp, tmp1, tmp2;
-
-	/* multiply red and blue at the same time */
-	stmp = (sval & 0x00ff00ff) * mval;
-
-	/* div255 */
-	tmp1 += 0x00010001;
-	tmp1 += (tmp1>>8) & 0x00ff00ff;
-	tmp1 >>= 8;
-	tmp1 = tmp1 & 0x00ff00ff; 
-
-	/* multiply green */
-	stmp = (sval>>8) & 0xff;
-
-	/* div255 */
-	tmp2 += 1;
-	tmp2 += (tmp2>>8) & 0xff;
-	tmp2 = tmp2 & 0xff00; 
-
-	return tmp1 | tmp2 | (mval<<24);
-}
-
-static inline u32int
 blend32(u32int dval, u32int sval, u32int mval)
 {
 	u32int dtmp, stmp, tmp1, tmp2;

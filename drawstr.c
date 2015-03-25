@@ -170,8 +170,8 @@ glyphsetup(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp, sho
 	loadimage8(glyim, rgly, face->glyph->bitmap.buffer, face->glyph->bitmap.width);
 
 	*uoffp = face->glyph->bitmap_left;
-	*voffp = (face->size->metrics.ascender>>6)-face->glyph->bitmap_top;
-	*uadvp = face->glyph->advance.x>>6;
+	*voffp = (face->size->metrics.ascender+63)/64-face->glyph->bitmap_top+1;
+	*uadvp = (face->glyph->advance.x+63)/64;
 	*vadvp = face->glyph->bitmap.rows + face->glyph->bitmap_top;
 	*width = face->glyph->bitmap.width;
 	*height = face->glyph->bitmap.rows;
@@ -199,7 +199,8 @@ freeglyph(Image *img)
 int
 linespace(void)
 {
-	return (face->size->metrics.height+63)/64;
+	return (face->size->metrics.height+63)/64+1;
+//	return (face->size->metrics.height+63)/64 + 2;
 	//return 15*fontsize/10;
 }
 
@@ -222,7 +223,8 @@ drawchar(Image *img, Rect rdst, int code, Image *color)
 	rret.uend = rdst.u0;
 
 	rret.v0 = rdst.v0;
-	rret.vend = rdst.v0 + (face->size->metrics.height+63)/64;
+	rret.vend = rdst.v0 + linespace();
+
 
 	glyim = glyphsetup(code, &uoff, &voff, &uadv, &vadv, &width, &height);
 	if(glyim == NULL)
@@ -233,13 +235,17 @@ drawchar(Image *img, Rect rdst, int code, Image *color)
 	glydst.v0 = rdst.v0 + voff;
 	glydst.uend = glydst.u0 + width;
 	glydst.vend = glydst.v0 + height;
-
-	drawblend(img, cliprect(rdst, glydst), color, glyim);
+if(0){
+if(glydst.v0 < rdst.v0)
+printf("vertical underflow '%x' glydst %d,%d rdst %d,%d\n", code, glydst.v0, glydst.vend, rdst.v0, rdst.vend);
+if(glydst.vend > rdst.vend)
+printf("vertical overflow '%x' glydst %d,%d rdst %d,%d\n", code, glydst.v0, glydst.vend, rdst.v0, rdst.vend);
+}
+	blend(img, glydst, color, glyim);
+//	drawblend(img, cliprect(glydst, rdst), color, glyim);
 	freeglyph(glyim);
 
-	rdst.u0 += uadv;
 	rret.uend += uadv;
-	
 out:
 	return rret;
 }
@@ -261,7 +267,7 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 	rret.uend = rdst.u0;
 
 	rret.v0 = rdst.v0;
-	rret.vend = rdst.v0 + (face->size->metrics.height+63)/64;
+	rret.vend = rdst.v0 + linespace();
 
 	for(off = 0; off < len && rdst.u0 < rdst.uend;){
 		int doff;
@@ -295,7 +301,7 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 		rret.v0 = rret.v0 < glydst.v0 ? rret.v0 : glydst.v0;
 		rret.vend = rret.vend > glydst.vend ? rret.vend : glydst.vend;
 
-		drawblend(img, glydst, colim, glyim);
+		blend(img, glydst, colim, glyim);
 		freeglyph(glyim);
 
 		rdst.u0 += uadv;
@@ -303,6 +309,6 @@ drawstr(Image *img, Rect rdst, char *str, int len, uchar *color)
 	}
 
 	freeimage(colim);
-
+out:
 	return rret;
 }

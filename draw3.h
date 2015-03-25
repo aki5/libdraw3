@@ -220,8 +220,13 @@ void drawtri_pscl(Image *img, Rect r, short *a, short *b, short *c, int pscl, uc
 int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix);
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
-void drawblend(Image *dst, Rect r, Image *src, Image *mask);
-void drawblend_back(Image *dst, Rect r, Image *src);
+
+void blend(Image *dst, Rect r, Image *src, Image *mask);
+
+void blend_add_over(Image *dst, Rect r, Image *src);
+void blend_add_under(Image *dst, Rect r, Image *src);
+void blend_sub(Image *dst, Rect r, Image *src);
+
 
 void drawanimate(int flag);
 void loadimage8(Image *img, Rect clipr, uchar *data, int stride);
