@@ -1,4 +1,3 @@
-
 #define passto_if(x) if(__builtin_expect(x, 1))
 #define goto_if(x) if(__builtin_expect(x, 0))
 
@@ -82,11 +81,19 @@ blend32(u32int dval, u32int sval, u32int mval)
 }
 
 static inline u32int
-blend32_over(u32int dval, u32int sval)
+blend32_under(u32int dval, u32int sval)
 {
 	u32int mval;
 	mval = 255 - (dval >> 24);
 	return blend32(dval, sval, mval);
+}
+
+static inline u32int
+blend32_over(u32int dval, u32int sval)
+{
+	u32int mval;
+	mval = 255 - (sval >> 24);
+	return blend32(sval, dval, mval);
 }
 
 static inline u32int

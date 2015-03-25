@@ -1,4 +1,3 @@
-
 #include "os.h"
 #include "draw3.h"
 #include "imgtools.h"
@@ -55,9 +54,9 @@ drawcircle(Image *dst, Rect dstr, short *p, short rad, int pscl, uchar *color)
 				float dst;
 				dst = blend_factor * (rad-sqrtf(err2));
 				goto_if(dst < 255.0f)
-					*dstp = blend32(*dstp, color32, (int)dst);
+					*dstp = blend32_under(*dstp, blend32_mask(color32, (u32int)dst<<24));
 				else
-					*dstp = color32;
+					*dstp = blend32_under(*dstp, color32);
 			}
 			dstp++;
 			err2 += (2*u<<pscl) + ((1<<pscl)<<pscl) - (2*pu<<pscl);
