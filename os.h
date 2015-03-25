@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <inttypes.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 typedef unsigned char uchar;
 typedef unsigned short u16int;
