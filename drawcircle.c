@@ -3,7 +3,7 @@
 #include "imgtools.h"
 
 void
-drawcircle(Image *dst, Rect dstr, short *p, short rad, int pscl, uchar *color)
+blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *p, short rad, int pscl)
 {
 	u32int *dstp, *dst_end, *dst_ustart, *dst_uend;
 	u32int color32;
@@ -36,7 +36,8 @@ drawcircle(Image *dst, Rect dstr, short *p, short rad, int pscl, uchar *color)
 	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
 	dst_end = dst_ustart + dst_stride*recth(&dstr);
 	dst_uend = dst_ustart + rectw(&dstr);
-	color32 = *(u32int *)color;
+
+	color32 = *(u32int *)src->img; /* todo: proper source image scanning instead of this hack*/
 
 	r2 = rad*rad;
 
@@ -51,12 +52,14 @@ drawcircle(Image *dst, Rect dstr, short *p, short rad, int pscl, uchar *color)
 		err2 = err2_ustart; //(pu-u)*(pu-u)+(pv-v)*(pv-v);
 		while(dstp < dst_uend){
 			passto_if(err2 <= r2){ // more than 50%
-				float dst;
-				dst = blend_factor * (rad-sqrtf(err2));
-				goto_if(dst < 255.0f)
-					*dstp = blend32_under(*dstp, blend32_mask(color32, (u32int)dst<<24));
-				else
-					*dstp = blend32_under(*dstp, color32);
+				float distf;
+				distf = blend_factor * (rad-sqrtf(err2));
+				distf = distf < 255.0f ? distf : 255.0f;
+				if(opcode == BlendUnder){
+					*dstp = blend32_under(*dstp, blend32_mask(color32, (u32int)distf<<24));
+				}else if(opcode == BlendOver){
+					*dstp = blend32_over(*dstp, blend32_mask(color32, (u32int)distf<<24));
+				}
 			}
 			dstp++;
 			err2 += (2*u<<pscl) + ((1<<pscl)<<pscl) - (2*pu<<pscl);

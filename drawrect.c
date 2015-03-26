@@ -5,7 +5,7 @@
 #define add_wrap(ptr, d, start, end) ptr = ptr+d; ptr = ptr < end ? ptr : start
 
 void
-blend(Image *dst, Rect r, Image *src0, Image *src1)
+blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 {
 	Rect dstr;
 	int uoff, voff;

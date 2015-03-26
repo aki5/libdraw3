@@ -236,7 +236,6 @@ int drawbusy(void);
 int drawhalt(void);
 
 void drawellipse(Image *dst, Rect dstr, short *a, short *b, short rad, int pscl, uchar *color);
-void drawcircle(Image *dst, Rect dstr, short *pt, short rad, int pscl, uchar *color);
 //void drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color, int subpix);
 void drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color);
 void drawtri_pscl(Image *img, Rect r, short *a, short *b, short *c, int pscl, uchar *color);
@@ -244,6 +243,7 @@ int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly,
 void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
 
+void blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *pt, short rad, int pscl);
 void blend(Image *dst, Rect r, Image *src, Image *mask);
 void blend2(Image *dst, Rect r, Image *src, int opcode);
 
@@ -261,7 +261,7 @@ void initdrawstr(char *path);
 int linespace(void);
 
 Rect drawstr(Image *img, Rect r, char *str, int len, Image *color);
-Rect drawchar(Image *img, Rect rdst, int code, Image *color);
+Rect drawchar(Image *img, Rect rdst, Image *color, int opcode, int charcode);
 
 void setfontsize(int size);
 int fontem(void);

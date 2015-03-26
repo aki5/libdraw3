@@ -211,7 +211,7 @@ fontem(void)
 }
 
 Rect
-drawchar(Image *img, Rect rdst, int code, Image *color)
+drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 {
 	Image *glyim;
 	Rect rret;
@@ -224,7 +224,7 @@ drawchar(Image *img, Rect rdst, int code, Image *color)
 	rret.v0 = rdst.v0;
 	rret.vend = rdst.v0 + linespace();
 
-	glyim = glyphsetup(code, &uoff, &voff, &uadv, &vadv, &width, &height);
+	glyim = glyphsetup(charcode, &uoff, &voff, &uadv, &vadv, &width, &height);
 	if(glyim == NULL)
 		goto out;
 
@@ -233,7 +233,7 @@ drawchar(Image *img, Rect rdst, int code, Image *color)
 	glydst.v0 = rdst.v0 + voff;
 	glydst.uend = glydst.u0 + width;
 	glydst.vend = glydst.v0 + height;
-	blend(img, glydst, color, glyim);
+	blend(img, glydst, color, glyim, opcode);
 	freeglyph(glyim);
 
 	rret.uend += uadv;
