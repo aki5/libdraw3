@@ -244,7 +244,7 @@ void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int
 void drawrect(Image *img, Rect r, uchar *color);
 
 void blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *pt, short rad, int pscl);
-void blend(Image *dst, Rect r, Image *src, Image *mask);
+void blend(Image *dst, Rect r, Image *src, Image *mask, int opcode);
 void blend2(Image *dst, Rect r, Image *src, int opcode);
 
 
@@ -260,7 +260,7 @@ void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 void initdrawstr(char *path);
 int linespace(void);
 
-Rect drawstr(Image *img, Rect r, char *str, int len, Image *color);
+Rect drawstr(Image *img, Rect r, Image *src, int opcode, char *str, int len);
 Rect drawchar(Image *img, Rect rdst, Image *color, int opcode, int charcode);
 
 void setfontsize(int size);

@@ -7,7 +7,8 @@
 static FT_Library library;
 static FT_Face face;
 static int libinit;
-static int fontsize = 10;
+static int fontsize = 11;
+static int dpi = 96;
 
 int
 utf8decode(char *str, int *offp, int len)
@@ -80,10 +81,16 @@ initdrawstr(char *path)
 	if(!libinit)
 		FT_Init_FreeType(&library);
 	FT_New_Face(library, path, 0, &face);
+
+	/* TODO: One day we have rgb masks for draw, but today is not that day */
 	//FT_Library_SetLcdFilter(library, FT_LCD_FILTER_DEFAULT);
-	FT_Set_Char_Size(face, fontsize<<6, 0, 72, 0); /* 50pt, 72dpi, whatever */
-	fprintf(stderr, "face: ascender %d descender %d height %d\n",
-		(face->size->metrics.ascender), (face->size->metrics.descender), (face->size->metrics.height));
+
+	FT_Set_Char_Size(face, fontsize<<6, 0, dpi, 0); 
+	if(0)fprintf(stderr, "face: ascender %ld descender %ld height %ld\n",
+		face->size->metrics.ascender,
+		face->size->metrics.descender,
+		face->size->metrics.height
+	);
 	
 }
 
@@ -118,7 +125,6 @@ freeimage(Image *img)
 	free(img);
 }
 
-
 static struct {
 	int code;
 	short uoff;
@@ -135,7 +141,7 @@ setfontsize(int size)
 {
 	int i;
 	fontsize = size;
-	FT_Set_Char_Size(face, fontsize<<6, 0, 100, 0);
+	FT_Set_Char_Size(face, fontsize<<6, 0, dpi, 0);
 	for(i = 0; i < nelem(cache); i++){
 		if(cache[i] != NULL){
 			freeimage(cache[i]->img);
@@ -196,12 +202,17 @@ freeglyph(Image *img)
 	//freeimage(img);
 }
 
+/*
+ *	Freetype2 doesn't actually give a reliable global height, so
+ *	no matter how much we fudge it, there's always a chance of
+ *	drawchar overflowing its rect.
+ */
 int
 linespace(void)
 {
 	return (face->size->metrics.height+63)/64+1;
-//	return (face->size->metrics.height+63)/64 + 2;
-	//return 15*fontsize/10;
+//return (face->size->metrics.height+63)/64 + 2;
+//return 15*fontsize/10;
 }
 
 int
@@ -233,7 +244,7 @@ drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 	glydst.v0 = rdst.v0 + voff;
 	glydst.uend = glydst.u0 + width;
 	glydst.vend = glydst.v0 + height;
-	blend(img, glydst, color, glyim, opcode);
+	blend(img, glydst, src, glyim, opcode);
 	freeglyph(glyim);
 
 	rret.uend += uadv;
@@ -242,10 +253,10 @@ out:
 }
 
 Rect
-drawstr(Image *img, Rect rdst, char *str, int len, Image *color)
+drawstr(Image *img, Rect rdst, Image *src, int opcode, char *str, int len)
 {
 	Rect rret;
-	int off, code;
+	int off, charcode;
 	short uoff, voff, uadv, vadv, width, height;
 
 	if(len == -1)
@@ -259,23 +270,23 @@ drawstr(Image *img, Rect rdst, char *str, int len, Image *color)
 
 	for(off = 0; off < len && rdst.u0 < rdst.uend;){
 		int doff;
-		code = utf8decode(str+off, &doff, len-off);
-		if(code == -1){
+		charcode = utf8decode(str+off, &doff, len-off);
+		if(charcode == -1){
 			off++;
 			continue;
 		} else {
 			off += doff;
 		}
-		if(code == '\n')
+		if(charcode == '\n')
 			continue;
-		if(code == '\t'){
+		if(charcode == '\t'){
 			rdst.u0 += 3 * fontem();
 			rret.uend += 3 * fontem();
 			continue;
 		}
 
 		Rect tr;
-		tr = drawchar(img, rdst, code, color);
+		tr = drawchar(img, rdst, src, opcode, charcode);
 		rret.u0 += rectw(&tr);
 		rdst.u0 = tr.uend;
 	}

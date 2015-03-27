@@ -42,6 +42,8 @@ long keysym2ucs(KeySym key);
 static int
 shminit(void)
 {
+	static int ntries;
+
 	shmimage = XShmCreateImage(
 		display, visual,
 		DefaultDepth(display, 0),
@@ -57,12 +59,15 @@ shminit(void)
 		IPC_CREAT | 0600
 	);
 	if(shminfo.shmid == -1){
-		fprintf(stderr, "shminit: shmget fail\n");
+		fprintf(stderr, "shminit: shmget fail, tries %d, errno %d: %s\n", ntries, errno, strerror(errno));
+		fprintf(stderr, "If you are on a mac, this is probably due to sysctls kern.sysv.shmmax and kern.sysv.shmall being too small\n");
+		fprintf(stderr, "Try something like kern.sysv.shmmax=67108864 and kern.sysv.shmall=16384\n");
+		XDestroyImage(shmimage);
 		return -1;
 	}
 	shminfo.shmaddr = shmimage->data = shmat(shminfo.shmid, NULL, 0);
 	if(shminfo.shmaddr == (void *)-1){
-		fprintf(stderr, "shminit: shmat fail\n");
+		fprintf(stderr, "shminit: shmat fail, errno %d: %s\n", errno, strerror(errno));
 		return -1;
 	}
 	shminfo.readOnly = False;
@@ -83,6 +88,8 @@ shminit(void)
 		screen.len = shmimage->bytes_per_line*shmimage->height;
 	} 
 
+	ntries++;
+
 	return 0;
 }
 
@@ -91,9 +98,9 @@ shmfree(void)
 {
 	XShmDetach(display, &shminfo);
 	XDestroyImage(shmimage);
+	XSync(display, 0);
 	if(shmdt(shminfo.shmaddr) == -1)
 		fprintf(stderr, "shmdt fail!\n");
-	XSync(display, 0);
 	if(shmctl(shminfo.shmid, IPC_RMID, NULL) == -1)
 		fprintf(stderr, "shmctl remove fail!\n");
 }
@@ -158,14 +165,6 @@ drawflush(Rect r)
 			dvoff += shmimage->bytes_per_line;
 		}
 		et = timenow();
-static int cnt;
-if(cnt >= 100){
-	fprintf(stderr, "blit in %f sec, %f MB/s\n", (et-st), 1e-6*(iend*screen.stride)/(et-st));
-	cnt = 0;
-} else {
-	cnt++;
-}
-
 	}
 	XShmPutImage(
 		display, window, DefaultGC(display, 0),
@@ -182,14 +181,6 @@ drawanimate(int flag)
 {
 	animating = flag;
 }
-
-/*
-int
-drawbusy(void)
-{
-	return flushing;
-}
-*/
 
 Input *
 getinputs(Input **ep)
@@ -363,8 +354,8 @@ drawevents2(int block, Input **inepp)
 					mod = KeyControl;
 					break;
 				case XK_Meta_L:
-				case XK_Meta_R:
-					mod = KeyMeta;
+				case XK_Meta_R: 
+					mod = KeyMeta;	/* mac command key */
 					break;
 				case XK_Alt_L:
 				case XK_Alt_R:
@@ -372,10 +363,12 @@ drawevents2(int block, Input **inepp)
 					break;
 				case XK_Super_L:
 				case XK_Super_R:
+fprintf(stderr, "super\n");
 					mod = KeySuper;
 					break;
 				case XK_Hyper_L:
 				case XK_Hyper_R:
+fprintf(stderr, "hyper\n");
 					mod = KeyHyper;
 					break;
 				case XK_KP_Insert:
