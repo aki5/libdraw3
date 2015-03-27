@@ -43,6 +43,7 @@ enum {
 enum {
 	BlendOver = 1,
 	BlendUnder,
+	BlendCopy,
 	BlendSub,
 	BlendMask,
 	BlendRsub,

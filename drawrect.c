@@ -69,10 +69,8 @@ blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 			__builtin_prefetch(src0p+16);
 			__builtin_prefetch(src1p+16);
 
-			//mval = *src1p >> 24;
-			//goto_if(mval > 0){
-				*dstp = blend32_over(*dstp, blend32_mask(*src0p, *src1p));
-			//}
+			*dstp = blend32_over(*dstp, blend32_mask(*src0p, *src1p));
+
 			add_wrap(src1p, 1, src1_ustart, src1_uend);
 			add_wrap(src0p, 1, src0_ustart, src0_uend);
 			dstp++;
@@ -159,6 +157,10 @@ blend2(Image *dst, Rect r, Image *src0, int opcode)
 	} else if(opcode == BlendUnder){
 		PRELUDE{
 			*dstp = blend32_under(*dstp, *src0p);
+		}POSTLUDE
+	} else if(opcode == BlendCopy){
+		PRELUDE{
+			*dstp = *src0p;
 		}POSTLUDE
 	}
 
