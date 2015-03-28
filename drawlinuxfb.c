@@ -20,7 +20,10 @@ static int stride;
 static int mousexy[2];
 static int mousefd;
 uchar *framebuffer;
+
 Image *ptrim;
+Image *ptrbg;
+
 Image phys;
 Image screen;
 
@@ -128,6 +131,7 @@ fprintf(stderr, "framebuffer size %d MB, vs. frame %d MB\n",
 	}
 
 	ptrim = allocimage(rect(0,0,16,16), color(80,100,180,180));
+	ptrbg = allocimage(rect(0,0,16,16), color(0,0,0,0));
 
 	return mousefd;
 
@@ -140,8 +144,18 @@ errout:
 static void
 ptrdraw(int pt[2])
 {
+	screen.r.u0 = pt[0];
+	screen.r.v0 = pt[1];
 	blend2(
-		&phys,
+		ptrbg,
+		ptrbg->r,
+		&screen,
+		BlendCopy
+	);
+	screen.r.u0 = 0;
+	screen.r.v0 = 0;
+	blend2(
+		&screen,
 		rect(pt[0], pt[1], pt[0]+rectw(&ptrim->r), pt[1]+recth(&ptrim->r)),
 		ptrim,
 		BlendOver
@@ -151,13 +165,22 @@ ptrdraw(int pt[2])
 static void
 ptrundraw(int pt[2])
 {
-//memcpy(phys.img, screen.img, screen.len);
+	blend2(
+		&screen,
+		rect(pt[0], pt[1], pt[0]+rectw(&ptrim->r), pt[1]+recth(&ptrim->r)),
+		ptrbg,
+		BlendCopy
+	);
+}
 
-	screen.r.u0 = pt[0];
-	screen.r.v0 = pt[1];
+static void
+ptrflush(Rect r)
+{
+	screen.r.u0 = r.u0;
+	screen.r.v0 = r.v0;
 	blend2(
 		&phys,
-		rect(pt[0], pt[1], pt[0]+rectw(&ptrim->r), pt[1]+recth(&ptrim->r)),
+		r,
 		&screen,
 		BlendCopy
 	);
@@ -168,8 +191,8 @@ ptrundraw(int pt[2])
 void
 drawflush(Rect r)
 {
-	memcpy(framebuffer, screen.img, screen.len);
 	ptrdraw(mousexy);
+	memcpy(framebuffer, screen.img, screen.len);
 }
 
 void
@@ -271,16 +294,37 @@ drawevents2(int block, Input **inepp)
 	while((block && ninputs == 0) || n > 0){ // || event pending
 
 		if(FD_ISSET(mousefd, &rset)){
+			Rect flushr;
 			static uchar mev0;
 			uchar mev[3];
 			if((n = read(mousefd, mev, sizeof mev)) != sizeof mev){
 				fprintf(stderr, "drawevents2: partial mouse: %d: %s\n", n, strerror(errno));
 			} else {
 
+				flushr.u0 = mousexy[0];
+				flushr.v0 = mousexy[1];
 				ptrundraw(mousexy);
-				mousexy[0] += (char)mev[1];
-				mousexy[1] -= (char)mev[2];
+				/* this is a workaround to a sign extension bug on gcc/arm. unbelieavable shit. */
+				mousexy[0] += (signed char)mev[1];
+				mousexy[1] -= (signed char)mev[2]; 
 				ptrdraw(mousexy);
+				flushr.uend = mousexy[0];
+				flushr.vend = mousexy[1];
+				if(flushr.uend < flushr.u0){
+					short tmp;
+					tmp = flushr.uend;
+					flushr.uend = flushr.u0;
+					flushr.u0 = tmp;
+				}
+				if(flushr.vend < flushr.v0){
+					short tmp;
+					tmp = flushr.vend;
+					flushr.vend = flushr.v0;
+					flushr.v0 = tmp;
+				}
+				flushr.uend += rectw(&ptrim->r);
+				flushr.vend += recth(&ptrim->r);
+				ptrflush(flushr);
 
 				/* I dislike the following too, but it does get the job done */
 				if((mev0&1) == 0 && (mev[0]&1) == 1)
@@ -313,7 +357,7 @@ drawevents2(int block, Input **inepp)
 		timeout.tv_usec = 0;
 		n = select(mousefd+1, &rset, NULL, NULL, &timeout);
 
-		//addredraw(); /* faking everything here. */
+		addredraw(); /* faking everything here. */
 	}
 
 	if(ninputs > 0){
