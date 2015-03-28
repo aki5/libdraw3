@@ -21,13 +21,14 @@ DRAW3_OFILES=\
 	$(ROOT)/libdraw3/drawtri.o\
 	$(ROOT)/libdraw3/drawcircle.o\
 	$(ROOT)/libdraw3/drawellipse.o\
-	$(ROOT)/libdraw3/port.o\
-	$(ROOT)/libdraw3/drawx11.o\
-	$(ROOT)/libdraw3/keysym2ucs.o \
+	$(ROOT)/libdraw3/drawlinuxfb.o\
+	$(ROOT)/libdraw3/arm6.o\
 
-	#$(ROOT)/libdraw3/drawlinuxfb.o\
+	#$(ROOT)/libdraw3/port.o\
+	#$(ROOT)/libdraw3/drawx11.o\
+	#$(ROOT)/libdraw3/keysym2ucs.o \
 	#$(ROOT)/libdraw3/dmacopy_rpi.o\
-	#$(ROOT)/libdraw3/arm6.o\
+
 	#$(ROOT)/libdraw3/magicu.o\
 	#$(ROOT)/libdraw3/drawtri_simd.o\
 

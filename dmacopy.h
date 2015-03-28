@@ -24,4 +24,4 @@ struct Dmacopy {
 int initdmacopy(Dmacopy *cpy, uchar *dst, uchar *src, int len);
 void freedmacopy(Dmacopy *cpy);
 int dmacopydone(Dmacopy *cpy);
-void startdmacopy(Dmacopy *cpy);
+int startdmacopy(Dmacopy *cpy);

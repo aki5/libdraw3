@@ -34,7 +34,6 @@ physmap(uchar *ptr, int size, uintptr *offp, uintptr **paddr)
 	uintptr i, va, vend;
 	int fd, npg;
 
-
 	if((fd = open("/proc/self/pagemap", O_RDONLY)) == -1)
 		return -1;
 
@@ -59,6 +58,7 @@ physmap(uchar *ptr, int size, uintptr *offp, uintptr **paddr)
 	npg = 0;
 	for(i = va; i < vend; i += 4096){
 		if(pread(fd, &pginfo, 8, 8*(i/4096)) != 8){
+			munlock((void*)va, 4096*npg);
 			close(fd);
 			return -1;
 		}
@@ -89,15 +89,34 @@ dmactrl(void)
 	return ctrl;	
 }
 
+void
+freedmacopy(Dmacopy *cpy)
+{
+	if(cpy->dst != NULL)
+		munlock(cpy->dst, cpy->len);
+	if(cpy->dst != NULL)
+		munlock(cpy->src, cpy->len);
+	if(cpy->desc != NULL){
+		munlock(cpy->desc, 4096*cpy->ndescpg);
+		munmap(cpy->desc, cpy->ndesc*32); // XXX: ndesc is no longer the same it was when we did the mmap
+	}
+	if(cpy->ctrl != NULL)
+		munmap(cpy->ctrl, 16*256);
+	if(cpy->dstpfn != NULL)
+		free(cpy->dstpfn);
+	if(cpy->srcpfn != NULL)
+		free(cpy->srcpfn);
+	if(cpy->descpfn != NULL)
+		free(cpy->descpfn);
+	memset(cpy, 0, sizeof cpy[0]);
+}
+
 int
 initdmacopy(Dmacopy *cpy, uchar *dst, uchar *src, int len)
 {
-	int npg, ndesc;
-	int i;
+	int ndesc;
 
 	memset(cpy, 0, sizeof cpy[0]);
-	cpy->dst = dst;
-	cpy->src = src;
 	cpy->len = len;
 
 	if((cpy->ctrl = dmactrl()) == NULL)
@@ -105,39 +124,50 @@ initdmacopy(Dmacopy *cpy, uchar *dst, uchar *src, int len)
 
 	cpy->chan = cpy->ctrl + (4*0x100)/4;
 
-	cpy->chan[CTRL_CS] = (1<<31); /* reset the thing, typically not necessary. */
-	__sync_synchronize();
-	cpy->chan[CTRL_DEBUG] = (1<<2)|(1<<1)|(1<<0); /* clear some errors, not that we check them :) */
+	/* reset the thing, typically not necessary. */
+	cpy->chan[CTRL_CS] = (1<<31);
 	__sync_synchronize();
 
-	if((cpy->ndstpg = physmap(dst, len, &cpy->dstoff, &cpy->dstpfn)) == -1)
-		return -1;
+	/* clear some errors, not that we check them :) */
+	cpy->chan[CTRL_DEBUG] = (1<<2)|(1<<1)|(1<<0);
+	__sync_synchronize();
 
-	if((cpy->nsrcpg = physmap(src, len, &cpy->srcoff, &cpy->srcpfn)) == -1)
+	cpy->dst = dst;
+	if((cpy->ndstpg = physmap(dst, len, &cpy->dstoff, &cpy->dstpfn)) == -1){
+		freedmacopy(cpy);
 		return -1;
+	}
+
+	cpy->src = src;
+	if((cpy->nsrcpg = physmap(src, len, &cpy->srcoff, &cpy->srcpfn)) == -1){
+		freedmacopy(cpy);
+		return -1;
+	}
 
 	ndesc = cpy->ndstpg + cpy->nsrcpg;
 	cpy->desc = mmap(NULL, 32*ndesc, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
-	if(cpy->desc == MAP_FAILED)
+	if(cpy->desc == MAP_FAILED){
+		cpy->desc = NULL;
+		freedmacopy(cpy);
 		return -1;
+	}
 
 	if((cpy->ndescpg = physmap((uchar*)cpy->desc, 32*ndesc, NULL, &cpy->descpfn)) == -1){
-		fprintf(stderr, "physmap descs: %s\n", strerror(errno));
+		freedmacopy(cpy);
 		return -1;
 	}
 
 	u32int *desc;
-	uintptr srcoff, dstoff, descoff;
-	int off, xferlen, desci;
+	uintptr srcoff, dstoff;
+	uintptr off, xferlen, desci;
 
 	srcoff = cpy->srcoff;
 	dstoff = cpy->dstoff;
-	descoff = 0;
 
 	off = 0;
 	desci = 0;
 	desc = NULL;
-	while(off < len){
+	while(off < (uintptr)len){
 		uintptr tmp;
 		xferlen = 4096 - (srcoff & 4095);
 		tmp = 4096 - (dstoff & 4095);
@@ -149,9 +179,10 @@ initdmacopy(Dmacopy *cpy, uchar *dst, uchar *src, int len)
 		/*
 		 *	A good burst size remains bit of a mystery. Going higher can give gains
 		 *	in throughput (seen >500MB/s copy with 8), but it makes the system unstable.
-		 *	Yet to see a lockup with <= 4.
+		 *	Yet to see a lockup with <= 4, so going with 4.
 		 */
-		desc[0] = DESC_SRC_INC | DESC_DST_INC | DESC_SRC_128BIT | DESC_DST_128BIT | (4<<DESC_BURST_SHIFT);
+		//desc[0] = DESC_SRC_INC | DESC_DST_INC | DESC_SRC_128BIT | DESC_DST_128BIT | (4<<DESC_BURST_SHIFT);
+		desc[0] = DESC_SRC_INC | DESC_DST_INC | DESC_SRC_128BIT | DESC_DST_128BIT | (2<<DESC_BURST_SHIFT);
 		desc[1] = (cpy->srcpfn[srcoff>>12]<<12) + (srcoff&4095);
 		desc[2] = (cpy->dstpfn[dstoff>>12]<<12) + (dstoff&4095);
 		desc[3] = xferlen;
@@ -169,20 +200,9 @@ initdmacopy(Dmacopy *cpy, uchar *dst, uchar *src, int len)
 	if(desc != NULL)
 		desc[5] = 0; /* terminate chain */
 	cpy->ndesc = desci;
+	return 0;
 }
 
-void
-freedmacopy(Dmacopy *cpy)
-{
-	munlock(cpy->dst, cpy->len);
-	munlock(cpy->src, cpy->len);
-	munlock(cpy->desc, 4096*cpy->ndescpg);
-	munmap(cpy->desc, cpy->ndesc*32); // XXX: ndesc is no longer the same it was when we did the mmap
-	munmap(cpy->ctrl, 16*256);
-	free(cpy->dstpfn);
-	free(cpy->srcpfn);
-	free(cpy->descpfn);
-}
 
 void
 dumpdmacopy(Dmacopy *cpy)
@@ -206,13 +226,14 @@ dmacopydone(Dmacopy *cpy)
 	return (cpy->chan[CTRL_CS] & 1) == 0;
 }
 
-void
+int
 startdmacopy(Dmacopy *cpy)
 {
-	int i;
+	if(cpy->chan == NULL)
+		return -1;
 	while(!dmacopydone(cpy)){
 		fprintf(stderr, "startdmacopy: channel is in use!\n");
-		usleep(100000);
+		return -1;
 	}
 	cpy->chan[CTRL_CONBLK_AD] = cpy->descpfn[0]<<12;
 	__sync_synchronize();
@@ -221,4 +242,5 @@ startdmacopy(Dmacopy *cpy)
 		CTRL_WAIT_FOR_OUTSTANDING_WRITES | CTRL_DISDEBUG
 		;
 	__sync_synchronize();
+	return 0;
 }

@@ -17,14 +17,17 @@ main(void)
 	b += align - ((uintptr)b & (align-1));
 
 	for(i = 0; i < size; i++){
-		a[i] = i;
-		b[i] = i+1;
+		a[i] = i/4096;
+		b[i] = i/4096+1;
 	}
 	et = timenow();
 	fprintf(stderr, "alloc and set values: %f sec\n", et-st);
 
 	st = timenow();
-	initdmacopy(&cpy, a, b, size);
+	if(initdmacopy(&cpy, a, b, size) == -1){
+		fprintf(stderr, "initdmacopy fail\n");
+		exit(1);
+	}
 	et = timenow();
 	fprintf(stderr, "initdmacopy: %f sec\n", et-st);
 

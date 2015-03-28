@@ -1,5 +1,6 @@
 #include "os.h"
 #include "draw3.h"
+#include "dmacopy.h"
 
 #include <sys/mman.h>
 #include <sys/ioctl.h>
@@ -19,6 +20,7 @@ static int stride;
 
 static int mousexy[2];
 static int mousefd;
+static int keybfd;
 uchar *framebuffer;
 
 Image *ptrim;
@@ -103,12 +105,14 @@ retry_varinfo:
 	}
 
 	framebuffer = mmap(NULL, fixinfo.smem_len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+	memset(framebuffer, 0, fixinfo.smem_len); /* just fault it in.. */
 	close(fd);
 
 	screen.r = rect(0, 0, varinfo.xres, varinfo.yres);
 	screen.len = fixinfo.smem_len;
 	screen.stride = fixinfo.line_length;
 	screen.img = mmap(NULL, screen.len, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
+	memset(screen.img, 0, screen.len); /* just to fault it in.. */
 
 	/* just for the mouse symbol */
 	phys.r = screen.r;
@@ -117,11 +121,6 @@ retry_varinfo:
 	phys.img = framebuffer;
 
 
-fprintf(stderr, "framebuffer size %d MB, vs. frame %d MB\n",
-	fixinfo.smem_len/(1024*1024),
-	screen.stride*recth(&screen.r)/(1024*1024)
-);
-
 	tcgetattr(0, &stupid);
 	ioctl(0, KDSKBMODE, K_UNICODE);
 
@@ -129,6 +128,7 @@ fprintf(stderr, "framebuffer size %d MB, vs. frame %d MB\n",
 		fprintf(stderr, "drawinit: could not open /dev/input/mice: %s\n", strerror(errno));
 		goto errout;
 	}
+	keybfd = 0;
 
 	ptrim = allocimage(rect(0,0,16,16), color(80,100,180,180));
 	ptrbg = allocimage(rect(0,0,16,16), color(0,0,0,0));
@@ -287,11 +287,21 @@ drawevents2(int block, Input **inepp)
 
 	FD_ZERO(&rset);
 	FD_SET(mousefd, &rset);
+	FD_SET(keybfd, &rset);
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
 	n = select(mousefd+1, &rset, NULL, NULL, &timeout);
 
-	while((block && ninputs == 0) || n > 0){ // || event pending
+	while((block && ninputs == 0)){ // || event pending
+
+		if(FD_ISSET(keybfd, &rset)){
+			char buf[16];
+			n = read(keybfd, buf, sizeof buf-1);
+			if(n > 0){
+				buf[n] = '\0';
+				fprintf(stderr, "got '%s'\n", buf);
+			}
+		}
 
 		if(FD_ISSET(mousefd, &rset)){
 			Rect flushr;
@@ -300,11 +310,9 @@ drawevents2(int block, Input **inepp)
 			if((n = read(mousefd, mev, sizeof mev)) != sizeof mev){
 				fprintf(stderr, "drawevents2: partial mouse: %d: %s\n", n, strerror(errno));
 			} else {
-
 				flushr.u0 = mousexy[0];
 				flushr.v0 = mousexy[1];
 				ptrundraw(mousexy);
-				/* this is a workaround to a sign extension bug on gcc/arm. unbelieavable shit. */
 				mousexy[0] += (signed char)mev[1];
 				mousexy[1] -= (signed char)mev[2]; 
 				ptrdraw(mousexy);
@@ -353,11 +361,13 @@ drawevents2(int block, Input **inepp)
 
 		FD_ZERO(&rset);
 		FD_SET(mousefd, &rset);
+		FD_SET(keybfd, &rset);
 		timeout.tv_sec = 0;
-		timeout.tv_usec = 0;
-		n = select(mousefd+1, &rset, NULL, NULL, &timeout);
+		timeout.tv_usec = 1000;
+		//n = select(mousefd+1, &rset, NULL, NULL, &timeout);
+		n = select(mousefd+1, &rset, NULL, NULL, NULL);
 
-		addredraw(); /* faking everything here. */
+		//addredraw(); /* faking everything here. */
 	}
 
 	if(ninputs > 0){
