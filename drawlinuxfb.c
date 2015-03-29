@@ -337,21 +337,25 @@ drawevents2(int block, Input **inepp)
 	timeout.tv_usec = 0;
 	n = select(mousefd+1, &rset, NULL, NULL, &timeout);
 
-	while((block && ninputs == 0)){ // || event pending
+	while((block && ninputs == 0) || n > 0){ // || event pending
 
 		if(FD_ISSET(keybfd, &rset)){
-			uchar buf[16];
-			n = read(keybfd, buf, sizeof buf-1);
+			static int isesc;
+			uchar buf[1];
+			n = read(keybfd, buf, 1);
 			if(n > 0){
 				char keystr[16];
 				int isup, keycode, key, keytype, shift;
 				if(buf[0] == 0xe0){
-					isup = buf[1]>>7;
-					key = 0x80 | (buf[1]&127);
-				} else {
-					isup = buf[0]>>7;
-					key = buf[0]&127;
+					isesc = 1;
+					goto keybdone;
 				}
+				isup = buf[0]>>7;
+				key = buf[0]&127;
+				if(isesc)
+					key |= 0x80;
+				isesc = 0;
+
 				if(input_prevmod & KeyShift)
 					keycode = us_key_maps[1][key];
 				else
@@ -422,6 +426,7 @@ drawevents2(int block, Input **inepp)
 				}
 			}
 		}
+keybdone:
 
 		if(FD_ISSET(mousefd, &rset)){
 			Rect flushr;
@@ -478,16 +483,18 @@ drawevents2(int block, Input **inepp)
 				mev0 = mev[0];
 			}
 		}
-/*
+
 		FD_ZERO(&rset);
 		FD_SET(mousefd, &rset);
 		FD_SET(keybfd, &rset);
-		timeout.tv_sec = 1;
+		timeout.tv_sec = 0;
 		timeout.tv_usec = 0;
-		//n = select(mousefd+1, &rset, NULL, NULL, &timeout);
-		n = select(mousefd+1, &rset, NULL, NULL, NULL);
-*/
-		addredraw();
+		if(ninputs > 0 || !block)
+			n = select(mousefd+1, &rset, NULL, NULL, &timeout);
+		else 
+			n = select(mousefd+1, &rset, NULL, NULL, NULL);
+
+		//addredraw();
 	}
 
 	if(ninputs > 0){
