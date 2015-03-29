@@ -5,11 +5,24 @@ LIBDRAW3_LIBS=-lX11 -lXext -lm `freetype-config --libs`
 DRAW3_HFILES=\
 	$(ROOT)/libdraw3/os.h\
 	$(ROOT)/libdraw3/draw3.h\
-	$(ROOT)/libdraw3/rectpool.h\
-	$(ROOT)/libdraw3/sqpool.h\
-	$(ROOT)/libdraw3/magicu.h\
 	$(ROOT)/libdraw3/imgtools.h\
-	$(ROOT)/libdraw3/dmacopy.h\
+
+	#$(ROOT)/libdraw3/rectpool.h\
+	#$(ROOT)/libdraw3/sqpool.h\
+	#$(ROOT)/libdraw3/magicu.h\
+	#$(ROOT)/libdraw3/dmacopy.h\
+
+DRAW3_HW=\
+	$(ROOT)/libdraw3/port.o\
+
+	#$(ROOT)/libdraw3/arm6.o\
+	
+DRAW3_XSHM=\
+	$(ROOT)/libdraw3/drawx11.o\
+	$(ROOT)/libdraw3/keysym2ucs.o \
+
+DRAW3_LINUXFB=\
+	$(ROOT)/libdraw3/drawlinuxfb.o\
 
 DRAW3_OFILES=\
 	$(ROOT)/libdraw3/drawpoly.o\
@@ -21,16 +34,10 @@ DRAW3_OFILES=\
 	$(ROOT)/libdraw3/drawtri.o\
 	$(ROOT)/libdraw3/drawcircle.o\
 	$(ROOT)/libdraw3/drawellipse.o\
-	$(ROOT)/libdraw3/drawlinuxfb.o\
-	$(ROOT)/libdraw3/arm6.o\
+	$(DRAW3_HW)\
+	$(DRAW3_LINUXFB)\
 
-	#$(ROOT)/libdraw3/port.o\
-	#$(ROOT)/libdraw3/drawx11.o\
-	#$(ROOT)/libdraw3/keysym2ucs.o \
-	#$(ROOT)/libdraw3/dmacopy_rpi.o\
-
-	#$(ROOT)/libdraw3/magicu.o\
-	#$(ROOT)/libdraw3/drawtri_simd.o\
+	#$(DRAW3_XSHM)\
 
 $(ROOT)/libdraw3/%.o: $(ROOT)/libdraw3/%.c
 	$(CC) -I$(ROOT)/libdraw3 $(CFLAGS) -c -o $@ $<

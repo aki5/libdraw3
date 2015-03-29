@@ -4,10 +4,14 @@
 
 #include <sys/mman.h>
 #include <sys/ioctl.h>
+#include <sys/signal.h>
 #include <linux/fb.h>
 #include <linux/kd.h>
 #include <linux/input.h>
+#include <linux/keyboard.h>
 #include <termios.h> /* sigh */
+
+#include "keyb/us-keyb.h"
 
 Input *inputs;
 int ninputs;
@@ -23,20 +27,44 @@ static int mousefd;
 static int keybfd;
 uchar *framebuffer;
 
+Image *debug;
 Image *ptrim;
 Image *ptrbg;
 
 Image phys;
 Image screen;
 
-static struct termios stupid;
+static struct termios tiosave;
 static void
 drawdie(void)
 {
+	int fd;
 	munmap(framebuffer, screen.len);
 	munmap(screen.img, screen.len);
-	ioctl(0, KDSKBMODE, K_XLATE);
-	tcsetattr(0, TCSAFLUSH, &stupid);
+	ioctl(0, KDSKBMODE, K_UNICODE);
+	tcsetattr(0, TCSAFLUSH, &tiosave);
+	if((fd = open("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY)) != -1){
+		write(fd, "1", 1);
+		close(fd);
+	}
+}
+
+void
+sigdie(int foo)
+{
+	drawdie();
+	exit(1);
+}
+
+static void
+rawtty(int fd)
+{
+	struct termios tio;
+	tio = tiosave;
+	tio.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON | OPOST);
+	tio.c_cflag |= CS8;
+	tio.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+	tcsetattr(fd, TCSAFLUSH, &tio);
 }
 
 int
@@ -45,6 +73,11 @@ drawinit(int w, int h)
 	struct fb_fix_screeninfo fixinfo;
 	struct fb_var_screeninfo varinfo;
 	int fd;
+
+	/* there are many more, but for now this will suffice */
+	signal(SIGINT, sigdie);
+	signal(SIGTERM, sigdie);
+	signal(SIGHUP, sigdie);
 
 	atexit(drawdie);
 
@@ -121,8 +154,16 @@ retry_varinfo:
 	phys.img = framebuffer;
 
 
-	tcgetattr(0, &stupid);
-	ioctl(0, KDSKBMODE, K_UNICODE);
+	if((fd = open("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY)) != -1){
+		write(fd, "0", 1);
+		close(fd);
+	} else {
+		fprintf(stderr, "drawinit: open /sys/class/graphics/fbcon/cursor_blink: %s\n", strerror(errno));
+	}
+
+	tcgetattr(0, &tiosave);
+	rawtty(0);
+	ioctl(0, KDSKBMODE, K_RAW);
 
 	if((mousefd = open("/dev/input/mice", O_RDONLY)) == -1){
 		fprintf(stderr, "drawinit: could not open /dev/input/mice: %s\n", strerror(errno));
@@ -130,6 +171,7 @@ retry_varinfo:
 	}
 	keybfd = 0;
 
+	debug = allocimage(rect(0,0,1,1), color(255,255,127,255));
 	ptrim = allocimage(rect(0,0,16,16), color(80,100,180,180));
 	ptrbg = allocimage(rect(0,0,16,16), color(0,0,0,0));
 
@@ -144,8 +186,8 @@ errout:
 static void
 ptrdraw(int pt[2])
 {
-	screen.r.u0 = pt[0];
-	screen.r.v0 = pt[1];
+	screen.r.u0 = iclamp(pt[0], screen.r.u0, screen.r.uend);
+	screen.r.v0 = iclamp(pt[1], screen.r.v0, screen.r.vend);
 	blend2(
 		ptrbg,
 		ptrbg->r,
@@ -176,8 +218,8 @@ ptrundraw(int pt[2])
 static void
 ptrflush(Rect r)
 {
-	screen.r.u0 = r.u0;
-	screen.r.v0 = r.v0;
+	screen.r.u0 = iclamp(r.u0, screen.r.u0, screen.r.uend);
+	screen.r.v0 = iclamp(r.v0, screen.r.v0, screen.r.vend);
 	blend2(
 		&phys,
 		r,
@@ -269,6 +311,8 @@ addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
 	}
 }
 
+char debugmsg[64];
+int debuglen;
 /*
  *	drawevents2 calls flush to display anything that was drawn.
  */
@@ -279,6 +323,7 @@ drawevents2(int block, Input **inepp)
 	fd_set rset;
 	int i, n;
 
+	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
 		drawflush(screen.r);
 		screen.dirty = 0;
@@ -295,11 +340,86 @@ drawevents2(int block, Input **inepp)
 	while((block && ninputs == 0)){ // || event pending
 
 		if(FD_ISSET(keybfd, &rset)){
-			char buf[16];
+			uchar buf[16];
 			n = read(keybfd, buf, sizeof buf-1);
 			if(n > 0){
-				buf[n] = '\0';
-				fprintf(stderr, "got '%s'\n", buf);
+				char keystr[16];
+				int isup, keycode, key, keytype, shift;
+				if(buf[0] == 0xe0){
+					isup = buf[1]>>7;
+					key = 0x80 | (buf[1]&127);
+				} else {
+					isup = buf[0]>>7;
+					key = buf[0]&127;
+				}
+				if(input_prevmod & KeyShift)
+					keycode = us_key_maps[1][key];
+				else
+					keycode = us_key_maps[0][key];
+				keytype = KTYP(keycode)&15;
+				switch(keytype){
+				case KT_LATIN: snprintf(keystr, sizeof keystr, "KT_LATIN"); break;
+				case KT_FN: snprintf(keystr, sizeof keystr, "KT_FN"); break;
+				case KT_SPEC: snprintf(keystr, sizeof keystr, "KT_SPEC"); break;
+				case KT_PAD: snprintf(keystr, sizeof keystr, "KT_PAD"); break;
+				case KT_DEAD: snprintf(keystr, sizeof keystr, "KT_DEAD"); break;
+				case KT_CONS: snprintf(keystr, sizeof keystr, "KT_CONS"); break;
+				case KT_CUR: snprintf(keystr, sizeof keystr, "KT_CUR"); break;
+				case KT_SHIFT: snprintf(keystr, sizeof keystr, "KT_SHIFT"); break;
+				case KT_META: snprintf(keystr, sizeof keystr, "KT_META"); break;
+				case KT_ASCII: snprintf(keystr, sizeof keystr, "KT_ASCII"); break;
+				case KT_LOCK: snprintf(keystr, sizeof keystr, "KT_LOCK"); break;
+				case KT_LETTER: snprintf(keystr, sizeof keystr, "KT_LETTER"); break;
+				case KT_SLOCK: snprintf(keystr, sizeof keystr, "KT_SLOCK"); break;
+				case KT_DEAD2: snprintf(keystr, sizeof keystr, "KT_DEAD2"); break;
+				case KT_BRL: snprintf(keystr, sizeof keystr, "KT_BRL"); break;
+				}
+				debuglen = snprintf(debugmsg, sizeof debugmsg, "key%s code %d len %d char '%c'(%d) type %s", isup ? "release" : "press", key, n, keycode & 0xff, keycode & 0xff, keystr);
+				if(key > 127){
+					switch(key){
+					case 200:
+						addinput(-1, -1, NULL, KeyUp, !isup, isup);
+						break;
+					case 203:
+						addinput(-1, -1, NULL, KeyLeft, !isup, isup);
+						break;
+					case 205:
+						addinput(-1, -1, NULL, KeyRight, !isup, isup);
+						break;
+					case 208:
+						addinput(-1, -1, NULL, KeyDown, !isup, isup);
+						break;
+					default:
+						break;
+					}
+				} else if(keytype == KT_SHIFT){
+					switch(keycode&0xf){
+					case KG_SHIFTL: case KG_SHIFTR: case KG_SHIFT:
+						addinput(-1, -1, NULL, KeyShift, !isup, isup);
+						break;
+					case KG_CTRLL: case KG_CTRLR: case KG_CTRL:
+						addinput(-1, -1, NULL, KeyControl, !isup, isup);
+						break;
+					case KG_ALTGR: case KG_ALT:
+						addinput(-1, -1, NULL, KeyAlt, !isup, isup);
+						break;
+					case KG_CAPSSHIFT:
+						addinput(-1, -1, NULL, KeyCapsLock, !isup, isup);
+						break;
+					}
+				} else {
+					if(keytype == KT_LATIN && (keycode&0xff) == 127){
+						addinput(-1, -1, NULL, KeyBackSpace, !isup, isup);
+					} else if(keytype == KT_SPEC && (keycode&0xff) == 1){
+						addinput(-1, -1, NULL, KeyEnter, !isup, isup);
+						if(!isup)
+							addinput(-1, -1, "\n", KeyStr, !isup, isup);
+					} else if((keytype == KT_LATIN || keytype == KT_LETTER) && !isup){
+						buf[0] = keycode & 0xff;
+						buf[1] = '\0';
+						addinput(-1, -1, buf, KeyStr, 1, 0);
+					}
+				}
 			}
 		}
 
@@ -358,16 +478,16 @@ drawevents2(int block, Input **inepp)
 				mev0 = mev[0];
 			}
 		}
-
+/*
 		FD_ZERO(&rset);
 		FD_SET(mousefd, &rset);
 		FD_SET(keybfd, &rset);
-		timeout.tv_sec = 0;
-		timeout.tv_usec = 1000;
+		timeout.tv_sec = 1;
+		timeout.tv_usec = 0;
 		//n = select(mousefd+1, &rset, NULL, NULL, &timeout);
 		n = select(mousefd+1, &rset, NULL, NULL, NULL);
-
-		//addredraw(); /* faking everything here. */
+*/
+		addredraw();
 	}
 
 	if(ninputs > 0){
@@ -396,3 +516,4 @@ drawfd(void)
 {
 	return -1;
 }
+

@@ -92,16 +92,15 @@ rectempty(Rect r)
 	return r.u0 >= r.uend || r.v0 >= r.vend;
 }
 
-/*
-static inline Rect
-offsetrect(Rect r, short *p)
+static inline short
+iclamp(short i, short start, short end)
 {
-	r.u0 += p[0];
-	r.v0 += p[1];
-	r.uend += p[0];
-	r.vend += p[0];
+	if(i < start)
+		i = start;
+	if(i >= end)
+		i = end-1;
+	return i;
 }
-*/
 
 static inline int
 ptinellipse(short *uv, short *c, short *d, int rad)
