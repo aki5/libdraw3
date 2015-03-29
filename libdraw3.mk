@@ -1,4 +1,5 @@
 
+TARGET_ARCH=$(shell uname -m)
 LIBDRAW3=$(ROOT)/libdraw3/libdraw3.a
 LIBDRAW3_LIBS=-lX11 -lXext -lm `freetype-config --libs`
 
@@ -13,9 +14,9 @@ DRAW3_HFILES=\
 	#$(ROOT)/libdraw3/dmacopy.h\
 
 DRAW3_HW=\
-	$(ROOT)/libdraw3/port.o\
-
+	$(ROOT)/libdraw3/$(TARGET_ARCH).o\
 	#$(ROOT)/libdraw3/arm6.o\
+	#$(ROOT)/libdraw3/port.o\
 	
 DRAW3_XSHM=\
 	$(ROOT)/libdraw3/drawx11.o\
