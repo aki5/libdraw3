@@ -1,6 +1,9 @@
 
-TARGET_ARCH=$(shell uname -m)
+#TARGET_ARCH=$(shell uname -m)
+#TARGET_ARCH=x86_64
+
 LIBDRAW3=$(ROOT)/libdraw3/libdraw3.a
+
 LIBDRAW3_LIBS=-lX11 -lXext -lm `freetype-config --libs`
 
 DRAW3_HFILES=\
@@ -15,8 +18,6 @@ DRAW3_HFILES=\
 
 DRAW3_HW=\
 	$(ROOT)/libdraw3/$(TARGET_ARCH).o\
-	#$(ROOT)/libdraw3/arm6.o\
-	#$(ROOT)/libdraw3/port.o\
 	
 DRAW3_XSHM=\
 	$(ROOT)/libdraw3/drawx11.o\
@@ -35,7 +36,7 @@ DRAW3_OFILES=\
 	$(ROOT)/libdraw3/drawtri.o\
 	$(ROOT)/libdraw3/drawcircle.o\
 	$(ROOT)/libdraw3/drawellipse.o\
-	$(DRAW3_HW)\
+	$(ROOT)/libdraw3/$(TARGET_ARCH).o\
 	$(DRAW3_LINUXFB)\
 
 	#$(DRAW3_XSHM)\
@@ -44,9 +45,10 @@ $(ROOT)/libdraw3/%.o: $(ROOT)/libdraw3/%.c
 	$(CC) -I$(ROOT)/libdraw3 $(CFLAGS) -c -o $@ $<
 
 $(ROOT)/libdraw3/drawstr.o: $(ROOT)/libdraw3/drawstr.c
-	$(CC) $(CFLAGS) `freetype-config --cflags` -o $@ -c $<
+	$(CC) -I$(ROOT)/libdraw3 $(CFLAGS) `freetype-config --cflags` -o $@ -c $<
 
 $(LIBDRAW3): $(DRAW3_OFILES)
 	$(AR) -rv $@  $(DRAW3_OFILES)
 
 $(DRAW3_OFILES): $(DRAW3_HFILES)
+

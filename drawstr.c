@@ -13,7 +13,6 @@ static int dpi = 96;
 int
 utf8decode(char *str, int *offp, int len)
 {
-	int off;
 	uchar *s;
 
 	s = (uchar *)str;
@@ -199,6 +198,7 @@ glyphsetup(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp, sho
 void
 freeglyph(Image *img)
 {
+	USED(img);
 	//freeimage(img);
 }
 
@@ -226,7 +226,6 @@ drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 {
 	Image *glyim;
 	Rect rret;
-	int off;
 	short uoff, voff, uadv, vadv, width, height;
 
 	rret.u0 = rdst.u0;
@@ -257,7 +256,6 @@ drawstr(Image *img, Rect rdst, Image *src, int opcode, char *str, int len)
 {
 	Rect rret;
 	int off, charcode;
-	short uoff, voff, uadv, vadv, width, height;
 
 	if(len == -1)
 		len = strlen(str);
@@ -291,6 +289,5 @@ drawstr(Image *img, Rect rdst, Image *src, int opcode, char *str, int len)
 		rdst.u0 = tr.uend;
 	}
 
-out:
 	return rret;
 }

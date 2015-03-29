@@ -18,10 +18,6 @@ int ninputs;
 static int ainputs;
 static int animating;
 
-static int width;
-static int height;
-static int stride;
-
 static int mousexy[2];
 static int mousefd;
 static int keybfd;
@@ -50,8 +46,9 @@ drawdie(void)
 }
 
 void
-sigdie(int foo)
+sigdie(int sig)
 {
+	USED(sig);
 	drawdie();
 	exit(1);
 }
@@ -73,6 +70,9 @@ drawinit(int w, int h)
 	struct fb_fix_screeninfo fixinfo;
 	struct fb_var_screeninfo varinfo;
 	int fd;
+
+	USED(w);
+	USED(h);
 
 	/* there are many more, but for now this will suffice */
 	signal(SIGINT, sigdie);
@@ -233,6 +233,7 @@ ptrflush(Rect r)
 void
 drawflush(Rect r)
 {
+	USED(r);
 	ptrdraw(mousexy);
 	memcpy(framebuffer, screen.img, screen.len);
 }
@@ -321,7 +322,7 @@ drawevents2(int block, Input **inepp)
 {
 	struct timeval timeout;
 	fd_set rset;
-	int i, n;
+	int n;
 
 	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
@@ -341,11 +342,11 @@ drawevents2(int block, Input **inepp)
 
 		if(FD_ISSET(keybfd, &rset)){
 			static int isesc;
-			uchar buf[1];
+			uchar buf[2];
 			n = read(keybfd, buf, 1);
 			if(n > 0){
 				char keystr[16];
-				int isup, keycode, key, keytype, shift;
+				int isup, keycode, key, keytype;
 				if(buf[0] == 0xe0){
 					isesc = 1;
 					goto keybdone;
@@ -421,7 +422,7 @@ drawevents2(int block, Input **inepp)
 					} else if((keytype == KT_LATIN || keytype == KT_LETTER) && !isup){
 						buf[0] = keycode & 0xff;
 						buf[1] = '\0';
-						addinput(-1, -1, buf, KeyStr, 1, 0);
+						addinput(-1, -1, (char *)buf, KeyStr, 1, 0);
 					}
 				}
 			}

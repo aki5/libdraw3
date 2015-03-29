@@ -1,11 +1,14 @@
 ROOT=..
 
 CFLAGS=-O3 -fomit-frame-pointer -W -Wall
+TARGET_ARCH=port
+ifeq ($(shell uname -m), armv6l)
+	TARGET_ARCH=armv6l
+endif
 
 all: $(ROOT)/libdraw3/libdraw3.a
 
 include libdraw3.mk
-
 
 dmacopy_test: dmacopy_test.o $(LIBDRAW3)
 	$(CC) -o $@ dmacopy_test.o $(LIBDRAW3) -lm `freetype-config --libs`

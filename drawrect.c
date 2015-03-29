@@ -26,7 +26,6 @@ blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 	int dst_stride, src0_stride, src1_stride;
 	u32int *dst_ustart, *src0_ustart, *src1_ustart;
 	u32int *dst_uend, *src0_uend, *src1_uend;
-	u32int mval;
 
 	src0_vstart = img_vstart(src0, uoff);
 	src1_vstart = img_vstart(src1, uoff);
@@ -63,17 +62,29 @@ blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 		src0_uend = src0_ustart + src0_uendoff;
 
 		dstp = dst_ustart;
-		while(dstp < dst_uend){
-
-			__builtin_prefetch(dstp+16);
-			__builtin_prefetch(src0p+16);
-			__builtin_prefetch(src1p+16);
-
-			*dstp = blend32_over(*dstp, blend32_mask(*src0p, *src1p));
-
-			add_wrap(src1p, 1, src1_ustart, src1_uend);
-			add_wrap(src0p, 1, src0_ustart, src0_uend);
-			dstp++;
+		if(opcode == BlendOver){
+			while(dstp < dst_uend){
+				__builtin_prefetch(dstp+16);
+				__builtin_prefetch(src0p+16);
+				__builtin_prefetch(src1p+16);
+				*dstp = blend32_over(*dstp, blend32_mask(*src0p, *src1p));
+				add_wrap(src1p, 1, src1_ustart, src1_uend);
+				add_wrap(src0p, 1, src0_ustart, src0_uend);
+				dstp++;
+			}
+		} else if(opcode == BlendUnder){
+			while(dstp < dst_uend){
+				__builtin_prefetch(dstp+16);
+				__builtin_prefetch(src0p+16);
+				__builtin_prefetch(src1p+16);
+				*dstp = blend32_under(*dstp, blend32_mask(*src0p, *src1p));
+				add_wrap(src1p, 1, src1_ustart, src1_uend);
+				add_wrap(src0p, 1, src0_ustart, src0_uend);
+				dstp++;
+			}
+		} else {
+			fprintf(stderr, "blend: unsupported opcode %d\n", opcode);
+			abort();
 		}
 
 		add_wrap(src1_ustart, src1_stride, src1_vstart, src1_end);
@@ -106,7 +117,6 @@ blend2(Image *dst, Rect r, Image *src0, int opcode)
 	int dst_stride, src0_stride;
 	u32int *dst_ustart, *src0_ustart;
 	u32int *dst_uend, *src0_uend;
-	u32int mval;
 
 	src0_vstart = img_vstart(src0, uoff);
 
@@ -162,6 +172,9 @@ blend2(Image *dst, Rect r, Image *src0, int opcode)
 		PRELUDE{
 			*dstp = *src0p;
 		}POSTLUDE
+	} else {
+		fprintf(stderr, "blend2: unsupported opcode %d\n", opcode);
+		abort();
 	}
 
 #undef PRELUDE

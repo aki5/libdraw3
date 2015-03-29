@@ -34,3 +34,6 @@ iabs(int x)
 {
 	return x < 0 ? -x : x;
 }
+
+#define USED(x) ((void)x)
+
