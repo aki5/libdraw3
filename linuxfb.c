@@ -21,6 +21,10 @@ static int animating;
 static int mousexy[2];
 static int mousefd;
 static int keybfd;
+
+static int eventfd[32];
+static int neventfd;
+
 uchar *framebuffer;
 
 Image *debug;
@@ -173,10 +177,15 @@ retry_varinfo:
 		goto errout;
 	}
 #else
-	if((mousefd = open("/dev/input/event1", O_RDONLY)) == -1){
-		fprintf(stderr, "drawinit: could not open /dev/input/input1: %s\n", strerror(errno));
-		goto errout;
+	int i;
+	char eventname[64];
+	for(i = 0; i < nelem(eventfd); i++){
+		snprintf(eventname, sizeof eventname, "/dev/input/event%d", i);
+		if((eventfd[neventfd] = open(eventname, O_RDONLY)) == -1)
+			continue;
+		neventfd++;
 	}
+fprintf(stderr, "opened %d eventfds\n", neventfd);
 #endif
 	keybfd = 0;
 
@@ -332,7 +341,7 @@ drawevents2(int block, Input **inepp)
 {
 	struct timeval timeout;
 	fd_set rset;
-	int n, maxfd;
+	int i, j, n, maxfd;
 
 	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
@@ -345,11 +354,15 @@ drawevents2(int block, Input **inepp)
 		initdone = 1;
 	}
 
+	maxfd = -1;
 	FD_ZERO(&rset);
-	FD_SET(mousefd, &rset);
-	maxfd = mousefd;
 	FD_SET(keybfd, &rset);
 	maxfd = maxi(maxfd, keybfd);
+	for(i = 0; i < neventfd; i++){
+		FD_SET(eventfd[i], &rset);
+		maxfd = maxi(maxfd, eventfd[i]);
+	}
+
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
 	n = select(maxfd+1, &rset, NULL, NULL, &timeout);
@@ -502,71 +515,73 @@ keybdone:
 			}
 		}
 #else
-		if(FD_ISSET(mousefd, &rset)){
-			Rect flushr;
-			struct input_event iev;
-			int i, n;
-			if((n = read(mousefd, &iev, sizeof iev)) != sizeof iev)
-				fprintf(stderr, "drawevents2: read %d mousefd: %s\n", n, strerror(errno));
-			if(iev.type == 2){ /* relative motion */
-				if(iev.code == 8){ /* nasty hack for the wheel... */
-					while(iev.value < 0){
-						addinput(mousexy[0], mousexy[1], NULL, Mouse4, 1, 0);
-						addinput(mousexy[0], mousexy[1], NULL, Mouse4, 0, 1);
-						iev.value++;
+		for(j = 0; j < neventfd; j++){
+			if(FD_ISSET(eventfd[j], &rset)){
+				Rect flushr;
+				struct input_event iev;
+				int i, n;
+				if((n = read(eventfd[j], &iev, sizeof iev)) != sizeof iev)
+					fprintf(stderr, "drawevents2: read %d eventfd[%d]: %s\n", n, j, strerror(errno));
+				if(iev.type == 2){ /* relative motion */
+					if(iev.code == 8){ /* nasty hack for the wheel... */
+						while(iev.value < 0){
+							addinput(mousexy[0], mousexy[1], NULL, Mouse4, 1, 0);
+							addinput(mousexy[0], mousexy[1], NULL, Mouse4, 0, 1);
+							iev.value++;
+						}
+						while(iev.value > 0){
+							addinput(mousexy[0], mousexy[1], NULL, Mouse5, 1, 0);
+							addinput(mousexy[0], mousexy[1], NULL, Mouse5, 0, 1);
+							iev.value--;
+						}
+					} else {
+						flushr.u0 = mousexy[0];
+						flushr.v0 = mousexy[1];
+						ptrundraw(mousexy);
+						if(iev.code == 1)
+							mousexy[1] += iev.value; 
+						if(iev.code == 0)
+							mousexy[0] += iev.value;
+						ptrdraw(mousexy);
+						flushr.uend = mousexy[0];
+						flushr.vend = mousexy[1];
+						if(flushr.uend < flushr.u0){
+							short tmp;
+							tmp = flushr.uend;
+							flushr.uend = flushr.u0;
+							flushr.u0 = tmp;
+						}
+						if(flushr.vend < flushr.v0){
+							short tmp;
+							tmp = flushr.vend;
+							flushr.vend = flushr.v0;
+							flushr.v0 = tmp;
+						}
+						flushr.uend += rectw(&ptrim->r);
+						flushr.vend += recth(&ptrim->r);
+						ptrflush(flushr);
+						for(i = Mouse0; i <= LastMouse; i <<= 1){
+							if((input_prevmod & i) != 0)
+								addinput(mousexy[0], mousexy[1], NULL, i, 0, 0);
+						}
 					}
-					while(iev.value > 0){
-						addinput(mousexy[0], mousexy[1], NULL, Mouse5, 1, 0);
-						addinput(mousexy[0], mousexy[1], NULL, Mouse5, 0, 1);
-						iev.value--;
+				} else if(iev.type == 1){ /* button event */
+					if(iev.code == BTN_LEFT){
+						if(iev.value == 1)
+							addinput(mousexy[0], mousexy[1], NULL, Mouse1, 1, 0);
+						else
+							addinput(mousexy[0], mousexy[1], NULL, Mouse1, 0, 1);
 					}
-				} else {
-					flushr.u0 = mousexy[0];
-					flushr.v0 = mousexy[1];
-					ptrundraw(mousexy);
-					if(iev.code == 1)
-						mousexy[1] += iev.value; 
-					if(iev.code == 0)
-						mousexy[0] += iev.value;
-					ptrdraw(mousexy);
-					flushr.uend = mousexy[0];
-					flushr.vend = mousexy[1];
-					if(flushr.uend < flushr.u0){
-						short tmp;
-						tmp = flushr.uend;
-						flushr.uend = flushr.u0;
-						flushr.u0 = tmp;
+					if(iev.code == BTN_RIGHT){
+						if(iev.value == 1)
+							addinput(mousexy[0], mousexy[1], NULL, Mouse3, 1, 0);
+						else
+							addinput(mousexy[0], mousexy[1], NULL, Mouse3, 0, 1);
 					}
-					if(flushr.vend < flushr.v0){
-						short tmp;
-						tmp = flushr.vend;
-						flushr.vend = flushr.v0;
-						flushr.v0 = tmp;
-					}
-					flushr.uend += rectw(&ptrim->r);
-					flushr.vend += recth(&ptrim->r);
-					ptrflush(flushr);
-					for(i = Mouse0; i <= LastMouse; i <<= 1){
-						if((input_prevmod & i) != 0)
-							addinput(mousexy[0], mousexy[1], NULL, i, 0, 0);
-					}
+
+					//debuglen = snprintf(debugmsg, sizeof debugmsg, "mouse time %ld.%06ld type %d code %d value %d", iev.time.tv_sec, iev.time.tv_usec, iev.type, iev.code, iev.value);
+					//addredraw(); //to show the debug msg
 				}
-			} else if(iev.type == 1){ /* button event */
-				if(iev.code == BTN_LEFT){
-					if(iev.value == 1)
-						addinput(mousexy[0], mousexy[1], NULL, Mouse1, 1, 0);
-					else
-						addinput(mousexy[0], mousexy[1], NULL, Mouse1, 0, 1);
-				}
-				if(iev.code == BTN_RIGHT){
-					if(iev.value == 1)
-						addinput(mousexy[0], mousexy[1], NULL, Mouse3, 1, 0);
-					else
-						addinput(mousexy[0], mousexy[1], NULL, Mouse3, 0, 1);
-				}
-				
-				//debuglen = snprintf(debugmsg, sizeof debugmsg, "mouse time %ld.%06ld type %d code %d value %d", iev.time.tv_sec, iev.time.tv_usec, iev.type, iev.code, iev.value);
-				//addredraw(); //to show the debug msg
 			}
 		}
 #endif
@@ -575,9 +590,10 @@ keybdone:
 		FD_ZERO(&rset);
 		FD_SET(keybfd, &rset);
 		maxfd = maxi(maxfd, keybfd);
-
-		FD_SET(mousefd, &rset);
-		maxfd = maxi(maxfd, mousefd);
+		for(i = 0; i < neventfd; i++){
+			FD_SET(eventfd[i], &rset);
+			maxfd = maxi(maxfd, eventfd[i]);
+		}
 
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 0;
