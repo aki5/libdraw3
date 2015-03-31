@@ -30,6 +30,8 @@ Image *ptrbg;
 Image phys;
 Image screen;
 
+#define DEV_INPUT_EVENTX 1
+
 static struct termios tiosave;
 static void
 drawdie(void)
@@ -155,22 +157,27 @@ retry_varinfo:
 	phys.stride = screen.stride;
 	phys.img = framebuffer;
 
-
+	/* disable blink if we can but shut up if we can not */
 	if((fd = open("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY)) != -1){
 		write(fd, "0", 1);
 		close(fd);
-	} else {
-		fprintf(stderr, "drawinit: open /sys/class/graphics/fbcon/cursor_blink: %s\n", strerror(errno));
 	}
 
 	tcgetattr(0, &tiosave);
 	rawtty(0);
 	ioctl(0, KDSKBMODE, K_RAW);
 
+#ifndef DEV_INPUT_EVENTX
 	if((mousefd = open("/dev/input/mice", O_RDONLY)) == -1){
 		fprintf(stderr, "drawinit: could not open /dev/input/mice: %s\n", strerror(errno));
 		goto errout;
 	}
+#else
+	if((mousefd = open("/dev/input/event1", O_RDONLY)) == -1){
+		fprintf(stderr, "drawinit: could not open /dev/input/input1: %s\n", strerror(errno));
+		goto errout;
+	}
+#endif
 	keybfd = 0;
 
 	debug = allocimage(rect(0,0,1,1), color(255,255,127,255));
@@ -314,8 +321,9 @@ addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
 	}
 }
 
-char debugmsg[64];
-int debuglen;
+static char debugmsg[64];
+static int debuglen;
+static int initdone;
 /*
  *	drawevents2 calls flush to display anything that was drawn.
  */
@@ -324,7 +332,7 @@ drawevents2(int block, Input **inepp)
 {
 	struct timeval timeout;
 	fd_set rset;
-	int n;
+	int n, maxfd;
 
 	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
@@ -332,13 +340,19 @@ drawevents2(int block, Input **inepp)
 		screen.dirty = 0;
 	}
 	ninputs = 0;
+	if(!initdone){
+		addredraw();
+		initdone = 1;
+	}
 
 	FD_ZERO(&rset);
 	FD_SET(mousefd, &rset);
+	maxfd = mousefd;
 	FD_SET(keybfd, &rset);
+	maxfd = maxi(maxfd, keybfd);
 	timeout.tv_sec = 0;
 	timeout.tv_usec = 0;
-	n = select(mousefd+1, &rset, NULL, NULL, &timeout);
+	n = select(maxfd+1, &rset, NULL, NULL, &timeout);
 
 	while((block && ninputs == 0) || n > 0){ // || event pending
 
@@ -431,6 +445,7 @@ drawevents2(int block, Input **inepp)
 		}
 keybdone:
 
+#ifndef DEV_INPUT_EVENTX
 		if(FD_ISSET(mousefd, &rset)){
 			Rect flushr;
 			static uchar mev0;
@@ -484,19 +499,92 @@ keybdone:
 				if((mev0&4) == 4 && (mev[0]&4) == 4)
 					addinput(mousexy[0], mousexy[1], NULL, Mouse2, 0, 0);
 				mev0 = mev[0];
-				debuglen = snprintf(debugmsg, sizeof debugmsg, "mouse %x %x %x %x len %d", mev[0], mev[1], mev[2], mev[3], n);
 			}
 		}
+#else
+		if(FD_ISSET(mousefd, &rset)){
+			Rect flushr;
+			struct input_event iev;
+			int i, n;
+			if((n = read(mousefd, &iev, sizeof iev)) != sizeof iev)
+				fprintf(stderr, "drawevents2: read %d mousefd: %s\n", n, strerror(errno));
+			if(iev.type == 2){ /* relative motion */
+				if(iev.code == 8){ /* nasty hack for the wheel... */
+					while(iev.value < 0){
+						addinput(mousexy[0], mousexy[1], NULL, Mouse4, 1, 0);
+						addinput(mousexy[0], mousexy[1], NULL, Mouse4, 0, 1);
+						iev.value++;
+					}
+					while(iev.value > 0){
+						addinput(mousexy[0], mousexy[1], NULL, Mouse5, 1, 0);
+						addinput(mousexy[0], mousexy[1], NULL, Mouse5, 0, 1);
+						iev.value--;
+					}
+				} else {
+					flushr.u0 = mousexy[0];
+					flushr.v0 = mousexy[1];
+					ptrundraw(mousexy);
+					if(iev.code == 1)
+						mousexy[1] += iev.value; 
+					if(iev.code == 0)
+						mousexy[0] += iev.value;
+					ptrdraw(mousexy);
+					flushr.uend = mousexy[0];
+					flushr.vend = mousexy[1];
+					if(flushr.uend < flushr.u0){
+						short tmp;
+						tmp = flushr.uend;
+						flushr.uend = flushr.u0;
+						flushr.u0 = tmp;
+					}
+					if(flushr.vend < flushr.v0){
+						short tmp;
+						tmp = flushr.vend;
+						flushr.vend = flushr.v0;
+						flushr.v0 = tmp;
+					}
+					flushr.uend += rectw(&ptrim->r);
+					flushr.vend += recth(&ptrim->r);
+					ptrflush(flushr);
+					for(i = Mouse0; i <= LastMouse; i <<= 1){
+						if((input_prevmod & i) != 0)
+							addinput(mousexy[0], mousexy[1], NULL, i, 0, 0);
+					}
+				}
+			} else if(iev.type == 1){ /* button event */
+				if(iev.code == BTN_LEFT){
+					if(iev.value == 1)
+						addinput(mousexy[0], mousexy[1], NULL, Mouse1, 1, 0);
+					else
+						addinput(mousexy[0], mousexy[1], NULL, Mouse1, 0, 1);
+				}
+				if(iev.code == BTN_RIGHT){
+					if(iev.value == 1)
+						addinput(mousexy[0], mousexy[1], NULL, Mouse3, 1, 0);
+					else
+						addinput(mousexy[0], mousexy[1], NULL, Mouse3, 0, 1);
+				}
+				
+				//debuglen = snprintf(debugmsg, sizeof debugmsg, "mouse time %ld.%06ld type %d code %d value %d", iev.time.tv_sec, iev.time.tv_usec, iev.type, iev.code, iev.value);
+				//addredraw(); //to show the debug msg
+			}
+		}
+#endif
 
+		maxfd = -1;
 		FD_ZERO(&rset);
-		FD_SET(mousefd, &rset);
 		FD_SET(keybfd, &rset);
+		maxfd = maxi(maxfd, keybfd);
+
+		FD_SET(mousefd, &rset);
+		maxfd = maxi(maxfd, mousefd);
+
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 0;
 		if(ninputs > 0 || !block)
-			n = select(mousefd+1, &rset, NULL, NULL, &timeout);
+			n = select(maxfd+1, &rset, NULL, NULL, &timeout);
 		else 
-			n = select(mousefd+1, &rset, NULL, NULL, NULL);
+			n = select(maxfd+1, &rset, NULL, NULL, NULL);
 
 		//addredraw();
 	}
