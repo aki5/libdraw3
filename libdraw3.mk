@@ -16,12 +16,12 @@ DRAW3_HFILES=\
 DRAW3_HW=\
 	$(ROOT)/libdraw3/$(TARGET_ARCH).o\
 	
-DRAW3_XSHM=\
-	$(ROOT)/libdraw3/drawx11.o\
+DRAW3_X11=\
+	$(ROOT)/libdraw3/x11.o\
 	$(ROOT)/libdraw3/keysym2ucs.o \
 
 DRAW3_LINUXFB=\
-	$(ROOT)/libdraw3/drawlinuxfb.o\
+	$(ROOT)/libdraw3/linuxfb.o\
 
 DRAW3_OFILES=\
 	$(ROOT)/libdraw3/drawpoly.o\
@@ -36,7 +36,7 @@ DRAW3_OFILES=\
 	$(ROOT)/libdraw3/$(TARGET_ARCH).o\
 	$(DRAW3_LINUXFB)\
 
-	#$(DRAW3_XSHM)\
+	#$(DRAW3_X11)\
 
 $(ROOT)/libdraw3/%.o: $(ROOT)/libdraw3/%.c
 	$(CC) -I$(ROOT)/libdraw3 $(CFLAGS) -c -o $@ $<
