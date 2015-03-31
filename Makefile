@@ -3,7 +3,7 @@ ROOT=..
 CFLAGS=-O3 -fomit-frame-pointer -W -Wall
 TARGET_ARCH=port
 ifeq ($(shell uname -m), armv6l)
-	TARGET_ARCH=armv6l
+	TARGET_ARCH=arm6
 endif
 
 all: $(ROOT)/libdraw3/libdraw3.a

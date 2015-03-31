@@ -1,7 +1,4 @@
 
-#TARGET_ARCH=$(shell uname -m)
-#TARGET_ARCH=x86_64
-
 LIBDRAW3=$(ROOT)/libdraw3/libdraw3.a
 
 LIBDRAW3_LIBS=-lX11 -lXext -lm `freetype-config --libs`

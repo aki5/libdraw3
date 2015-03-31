@@ -35,8 +35,10 @@ static void
 drawdie(void)
 {
 	int fd;
-	munmap(framebuffer, screen.len);
-	munmap(screen.img, screen.len);
+	if(framebuffer != NULL)
+		munmap(framebuffer, screen.len);
+	if(screen.img != NULL)
+		munmap(screen.img, screen.len);
 	ioctl(0, KDSKBMODE, K_UNICODE);
 	tcsetattr(0, TCSAFLUSH, &tiosave);
 	if((fd = open("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY)) != -1){
@@ -147,7 +149,7 @@ retry_varinfo:
 	screen.img = mmap(NULL, screen.len, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	memset(screen.img, 0, screen.len); /* just to fault it in.. */
 
-	/* just for the mouse symbol */
+	/* just for drawing the pointer */
 	phys.r = screen.r;
 	phys.len = screen.len;
 	phys.stride = screen.stride;
@@ -432,8 +434,8 @@ keybdone:
 		if(FD_ISSET(mousefd, &rset)){
 			Rect flushr;
 			static uchar mev0;
-			uchar mev[3];
-			if((n = read(mousefd, mev, sizeof mev)) != sizeof mev){
+			uchar mev[16];
+			if((n = read(mousefd, mev, sizeof mev)) < 3){
 				fprintf(stderr, "drawevents2: partial mouse: %d: %s\n", n, strerror(errno));
 			} else {
 				flushr.u0 = mousexy[0];
@@ -482,6 +484,7 @@ keybdone:
 				if((mev0&4) == 4 && (mev[0]&4) == 4)
 					addinput(mousexy[0], mousexy[1], NULL, Mouse2, 0, 0);
 				mev0 = mev[0];
+				debuglen = snprintf(debugmsg, sizeof debugmsg, "mouse %x %x %x %x len %d", mev[0], mev[1], mev[2], mev[3], n);
 			}
 		}
 
