@@ -129,14 +129,17 @@ initrectpool(Rectpool *rpool, Rect r)
 		if(sum >= recth(&r))
 			break;
 	}
+	if(i > 0){
 fprintf(stderr, "sum = %d, i = %d, s = %d\n", sum, i-1, segr[i-1]);
-	rpool->segr = segr;
-	rpool->asegr = 32;
-	rpool->nsegr = i-1;
-	rpool->bestfit = 3;
-
-	rpool->r = r;
-	addrow(rpool, r.v0, recth(&r));
+		rpool->segr = segr;
+		rpool->asegr = 32;
+		rpool->nsegr = i-1;
+		rpool->bestfit = 3;
+		rpool->r = r;
+		addrow(rpool, r.v0, recth(&r));
+	} else {
+		free(segr);
+	}
 }
 
 void

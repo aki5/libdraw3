@@ -40,7 +40,6 @@ drawellipse(Image *dst, Rect dstr, short *a, short *b, short rad, int pscl, ucha
 	dst_uend = dst_ustart + rectw(&dstr);
 	color32 = *(u32int *)color;
 
-	u = dstr.u0 << pscl;
 	v = dstr.v0 << pscl;
 
 	float blend_limit, blend_factor;

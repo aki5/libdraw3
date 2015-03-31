@@ -148,12 +148,10 @@ drawflush(Rect r)
 {
 	if(shmimage->bits_per_pixel == 16){
 		int i;
-		double st, et;
 		uchar *src, *dst;
 		int dvoff, svoff;
 		int iend;
 
-		st = timenow();
 		src = screen.img;
 		dst = (uchar*)shmimage->data;
 		iend = screen.r.vend;
@@ -164,7 +162,6 @@ drawflush(Rect r)
 			svoff += screen.stride;
 			dvoff += shmimage->bytes_per_line;
 		}
-		et = timenow();
 	}
 	XShmPutImage(
 		display, window, DefaultGC(display, 0),
@@ -173,7 +170,6 @@ drawflush(Rect r)
 		r.u0, r.v0, rectw(&r), recth(&r),
 		True // generate completion event
 	);
-	//fprintf(stderr, "flushed\n");
 }
 
 void
@@ -424,16 +420,7 @@ fprintf(stderr, "hyper\n");
 			continue;	
 		case EnterNotify:
 		case LeaveNotify:
-			{
-				XCrossingEvent *ep = &ev.xcrossing;
-				if(0)fprintf(
-					stderr,
-					"%s at (%d,%d) state %x\n",
-					ev.type == EnterNotify ? "enter" : "leave",
-					ep->x, ep->y,
-					ep->state
-				);
-			}
+			fprintf(stderr, "enter/leave\n");
 			continue;
 		case MotionNotify:
 			if(input_prevmod != 0){

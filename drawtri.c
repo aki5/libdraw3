@@ -91,7 +91,6 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 					abp+abp_dy < 0 || bcp+bcp_dy < 0 || cap+cap_dy < 0
 				){
 					int tmp, xx;
-					xx = 255;
 					tmp = 255;
 					xx = (s64int)255*abp*abp_rcpdx >> Psh;
 					tmp = mini(tmp, xx);

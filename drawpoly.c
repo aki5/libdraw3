@@ -191,7 +191,6 @@ retry:
 				debugpoly(img, width, height, pt, poly, inpoly);
 				npoly = inpoly;
 				bugger = 1;
-				color = grey;
 				showcolors(img, width, height);
 				goto retry;
 			}
