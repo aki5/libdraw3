@@ -1,6 +1,6 @@
 ROOT=..
 
-CFLAGS=-O3 -fomit-frame-pointer -W -Wall
+CFLAGS=-Os -fomit-frame-pointer -W -Wall
 TARGET_ARCH=port
 ifeq ($(shell uname -m), armv6l)
 	TARGET_ARCH=arm6
