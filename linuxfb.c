@@ -82,6 +82,8 @@ drawinit(int w, int h)
 	signal(SIGINT, sigdie);
 	signal(SIGTERM, sigdie);
 	signal(SIGHUP, sigdie);
+	signal(SIGSEGV, sigdie);
+	signal(SIGABRT, sigdie);
 
 	atexit(drawdie);
 
