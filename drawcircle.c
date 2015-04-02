@@ -33,7 +33,7 @@ blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *p, short rad, 
 	blend_factor = 255.0f / (float)(1<<pscl);
 
 	dst_stride = dst->stride/4;
-	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0, 1);
 	dst_end = dst_ustart + dst_stride*recth(&dstr);
 	dst_uend = dst_ustart + rectw(&dstr);
 

@@ -113,17 +113,20 @@ blend32_mask(u32int dval, u32int sval)
 }
 
 static inline u32int *
-img_uvstart(Image *img, int uoff, int voff)
+img_uvstart(Image *img, int uoff, int voff, int isdst)
 {
 	int u0, v0;
-	while(uoff < 0)
-		uoff += rectw(&img->r);
-	while(voff < 0)
-		voff += rectw(&img->r);
-	//u0 = img->r.u0 + (uoff % rectw(&img->r));
-	//v0 = img->r.v0 + (voff % recth(&img->r));
-	u0 = (uoff % rectw(&img->r));
-	v0 = (voff % recth(&img->r));
+	if(isdst){
+		u0 = uoff;
+		v0 = voff;
+	} else {
+		while(uoff < 0)
+			uoff += rectw(&img->r);
+		while(voff < 0)
+			voff += rectw(&img->r);
+		u0 = (uoff % rectw(&img->r));
+		v0 = (voff % recth(&img->r));
+	}
 	return (u32int*)(img->img + img->stride*v0 + 4*u0);
 }
 

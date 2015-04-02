@@ -35,7 +35,7 @@ drawellipse(Image *dst, Rect dstr, short *a, short *b, short rad, int pscl, ucha
 	dstr = cliprect(dstr, dst->r);
 
 	dst_stride = dst->stride/4;
-	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0, 1);
 	dst_end = dst_ustart + dst_stride*recth(&dstr);
 	dst_uend = dst_ustart + rectw(&dstr);
 	color32 = *(u32int *)color;

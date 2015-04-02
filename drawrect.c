@@ -10,21 +10,14 @@ blend(Image *dst, Rect r, short *off, Image *src0, Image *src1, int opcode)
 	Rect dstr;
 	int uoff, voff;
 
-	dstr = cliprect(r, dst->r);
-	if(rectempty(dstr))
+	if(rectisect(r, dst->r) == 0)
 		return;
 
+	dstr = cliprect(r, dst->r);
 	dst->dirty = 1;
 
 	uoff = dstr.u0 - off[0];
 	voff = dstr.v0 - off[1];
-
-/*
-	if(uoff >= dstr.uend)
-		return;
-	if(voff >= dstr.vend)
-		return;
-*/
 
 	u32int *dstp, *src0p, *src1p;
 	u32int *src0_vstart, *src1_vstart;
@@ -37,9 +30,9 @@ blend(Image *dst, Rect r, short *off, Image *src0, Image *src1, int opcode)
 	src0_vstart = img_vstart(src0, uoff);
 	src1_vstart = img_vstart(src1, uoff);
 
-	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
-	src0_ustart = img_uvstart(src0, uoff, voff);
-	src1_ustart = img_uvstart(src1, uoff, voff);
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0, 1);
+	src0_ustart = img_uvstart(src0, uoff, voff, 0);
+	src1_ustart = img_uvstart(src1, uoff, voff, 0);
 
 	__builtin_prefetch(dst_ustart);
 	__builtin_prefetch(src0_ustart);
@@ -108,14 +101,14 @@ blend2(Image *dst, Rect r, Image *src0, short *off, int opcode)
 	Rect dstr;
 	int uoff, voff;
 
-	dstr = cliprect(r, dst->r);
-	if(rectempty(dstr))
+	if(rectisect(r, dst->r) == 0)
 		return;
+	dstr = cliprect(r, dst->r);
 
 	dst->dirty = 1;
 
-	uoff = dstr.u0 - off[0]; //r.u0;
-	voff = dstr.v0 - off[1]; //r.v0;
+	uoff = dstr.u0 - off[0];
+	voff = dstr.v0 - off[1];
 
 	u32int *dstp, *src0p;
 	u32int *src0_vstart;
@@ -127,8 +120,8 @@ blend2(Image *dst, Rect r, Image *src0, short *off, int opcode)
 
 	src0_vstart = img_vstart(src0, uoff);
 
-	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0);
-	src0_ustart = img_uvstart(src0, uoff, voff);
+	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0, 1);
+	src0_ustart = img_uvstart(src0, uoff, voff, 0);
 
 	__builtin_prefetch(dst_ustart);
 	__builtin_prefetch(src0_ustart);

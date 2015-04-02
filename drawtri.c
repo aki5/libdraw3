@@ -30,7 +30,7 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 	int abp_dy, bcp_dy, cap_dy;
 
 	dst_stride = dst->stride/4;
-	dst_ustart = img_uvstart(dst, dstr->u0, dstr->v0);
+	dst_ustart = img_uvstart(dst, dstr->u0, dstr->v0, 1);
 	dst_end = dst_ustart + dst_stride*recth(dstr);
 	dst_uend = dst_ustart + rectw(dstr);
 	color32 = *(u32int *)color;
