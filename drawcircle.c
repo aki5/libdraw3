@@ -57,8 +57,10 @@ blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *p, short rad, 
 				distf = distf < 255.0f ? distf : 255.0f;
 				if(opcode == BlendUnder){
 					*dstp = blend32_under(*dstp, blend32_mask(color32, (u32int)distf<<24));
-				}else if(opcode == BlendOver){
+				} else if(opcode == BlendOver){
 					*dstp = blend32_over(*dstp, blend32_mask(color32, (u32int)distf<<24));
+				} else if(opcode == BlendSub){
+					*dstp = blend32_sub(*dstp, blend32_mask(color32, (u32int)distf<<24));
 				}
 			}
 			dstp++;
