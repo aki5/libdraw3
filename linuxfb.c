@@ -343,7 +343,7 @@ drawevents2(int block, Input **inepp)
 	fd_set rset;
 	int i, j, n, maxfd;
 
-	//drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
+	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
 		drawflush(screen.r);
 		screen.dirty = 0;
