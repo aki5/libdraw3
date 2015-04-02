@@ -120,8 +120,10 @@ img_uvstart(Image *img, int uoff, int voff)
 		uoff += rectw(&img->r);
 	while(voff < 0)
 		voff += rectw(&img->r);
-	u0 = img->r.u0 + (uoff % rectw(&img->r));
-	v0 = img->r.v0 + (voff % recth(&img->r));
+	//u0 = img->r.u0 + (uoff % rectw(&img->r));
+	//v0 = img->r.v0 + (voff % recth(&img->r));
+	u0 = (uoff % rectw(&img->r));
+	v0 = (voff % recth(&img->r));
 	return (u32int*)(img->img + img->stride*v0 + 4*u0);
 }
 
@@ -131,9 +133,19 @@ img_vstart(Image *img, int uoff)
 	int u0, v0;
 	while(uoff < 0)
 		uoff += rectw(&img->r);
-	u0 = img->r.u0 + (uoff % rectw(&img->r));
+	//u0 = img->r.u0 + (uoff % rectw(&img->r));
+	u0 = (uoff % rectw(&img->r));
 	v0 = img->r.v0;
 	return (u32int*)(img->img + img->stride*v0 + 4*u0);
+}
+
+static inline int
+img_uwrap(Image *img, int uoff)
+{
+	while(uoff < 0)
+		uoff += rectw(&img->r);
+	uoff %= rectw(&img->r);
+	return rectw(&img->r) - uoff;
 }
 
 static inline u32int *

@@ -238,12 +238,14 @@ drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 	if(glyim == NULL)
 		goto out;
 
-	Rect glydst;
-	glydst.u0 = rdst.u0 + uoff;
-	glydst.v0 = rdst.v0 + voff;
-	glydst.uend = glydst.u0 + width;
-	glydst.vend = glydst.v0 + height;
-	blend(img, glydst, src, glyim, opcode);
+	if(!rectempty(rdst) && !rectempty(glyim->r)){
+		Rect glydst;
+		glydst.u0 = rdst.u0 + uoff;
+		glydst.v0 = rdst.v0 + voff;
+		glydst.uend = glydst.u0 + width;
+		glydst.vend = glydst.v0 + height;
+		blend(img, glydst, pt(glydst.u0, glydst.v0), src, glyim, opcode);
+	}
 	freeglyph(glyim);
 
 	rret.uend += uadv;

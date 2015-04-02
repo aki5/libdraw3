@@ -244,8 +244,8 @@ void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int
 void drawrect(Image *img, Rect r, uchar *color);
 
 void blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *pt, short rad, int pscl);
-void blend(Image *dst, Rect r, Image *src, Image *mask, int opcode);
-void blend2(Image *dst, Rect r, Image *src, int opcode);
+void blend(Image *dst, Rect r, short *off, Image *src, Image *mask, int opcode);
+void blend2(Image *dst, Rect r, Image *src, short *off, int opcode);
 
 
 

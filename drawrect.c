@@ -5,7 +5,7 @@
 #define add_wrap(ptr, d, start, end) ptr = ptr+d; ptr = ptr < end ? ptr : start
 
 void
-blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
+blend(Image *dst, Rect r, short *off, Image *src0, Image *src1, int opcode)
 {
 	Rect dstr;
 	int uoff, voff;
@@ -16,13 +16,20 @@ blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 
 	dst->dirty = 1;
 
-	uoff = dstr.u0-r.u0;
-	voff = dstr.v0-r.v0;
+	uoff = dstr.u0 - off[0];
+	voff = dstr.v0 - off[1];
+
+/*
+	if(uoff >= dstr.uend)
+		return;
+	if(voff >= dstr.vend)
+		return;
+*/
 
 	u32int *dstp, *src0p, *src1p;
 	u32int *src0_vstart, *src1_vstart;
 	u32int *dst_end, *src0_end, *src1_end;
-	int src0_uendoff, src1_uendoff;
+	int src0_uwrapoff, src1_uwrapoff;
 	int dst_stride, src0_stride, src1_stride;
 	u32int *dst_ustart, *src0_ustart, *src1_ustart;
 	u32int *dst_uend, *src0_uend, *src1_uend;
@@ -50,16 +57,16 @@ blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 	src1_end = img_end(src1);
 
 	dst_uend = dst_ustart + rectw(&dstr);
-	src0_uendoff = rectw(&src0->r) - uoff;
-	src1_uendoff = rectw(&src1->r) - uoff;
+	src0_uwrapoff = img_uwrap(src0, uoff); 
+	src1_uwrapoff = img_uwrap(src1, uoff); 
 
 	while(dst_ustart < dst_end){
 
 		src1p = src1_ustart;
-		src1_uend = src1_ustart + src1_uendoff;
+		src1_uend = src1_ustart + src1_uwrapoff;
 
 		src0p = src0_ustart;
-		src0_uend = src0_ustart + src0_uendoff;
+		src0_uend = src0_ustart + src0_uwrapoff;
 
 		dstp = dst_ustart;
 		if(opcode == BlendOver){
@@ -96,7 +103,7 @@ blend(Image *dst, Rect r, Image *src0, Image *src1, int opcode)
 }
 
 void
-blend2(Image *dst, Rect r, Image *src0, int opcode)
+blend2(Image *dst, Rect r, Image *src0, short *off, int opcode)
 {
 	Rect dstr;
 	int uoff, voff;
@@ -107,13 +114,13 @@ blend2(Image *dst, Rect r, Image *src0, int opcode)
 
 	dst->dirty = 1;
 
-	uoff = dstr.u0-r.u0;
-	voff = dstr.v0-r.v0;
+	uoff = dstr.u0 - off[0]; //r.u0;
+	voff = dstr.v0 - off[1]; //r.v0;
 
 	u32int *dstp, *src0p;
 	u32int *src0_vstart;
 	u32int *dst_end, *src0_end;
-	int src0_uendoff;
+	int src0_uwrapoff;
 	int dst_stride, src0_stride;
 	u32int *dst_ustart, *src0_ustart;
 	u32int *dst_uend, *src0_uend;
@@ -135,7 +142,7 @@ blend2(Image *dst, Rect r, Image *src0, int opcode)
 	src0_end = img_end(src0);
 
 	dst_uend = dst_ustart + rectw(&dstr);
-	src0_uendoff = rectw(&src0->r) - uoff;
+	src0_uwrapoff = img_uwrap(src0, uoff);
 
 	/*
 	 *	The hideous #define
@@ -143,7 +150,7 @@ blend2(Image *dst, Rect r, Image *src0, int opcode)
 #define PRELUDE \
 	while(dst_ustart < dst_end){\
 		src0p = src0_ustart;\
-		src0_uend = src0_ustart + src0_uendoff;\
+		src0_uend = src0_ustart + src0_uwrapoff;\
 		dstp = dst_ustart;\
 		while(dstp < dst_uend){\
 			__builtin_prefetch(dstp+16);\

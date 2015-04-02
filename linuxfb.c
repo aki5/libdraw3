@@ -88,6 +88,8 @@ drawinit(int w, int h)
 	signal(SIGHUP, sigdie);
 	signal(SIGSEGV, sigdie);
 	signal(SIGABRT, sigdie);
+	signal(SIGFPE, sigdie);
+	signal(SIGKILL, sigdie);
 
 	atexit(drawdie);
 
@@ -204,33 +206,32 @@ errout:
 }
 
 static void
-ptrdraw(int pt[2])
+ptrdraw(int xy[2])
 {
-	screen.r.u0 = iclamp(pt[0], screen.r.u0, screen.r.uend);
-	screen.r.v0 = iclamp(pt[1], screen.r.v0, screen.r.vend);
 	blend2(
 		ptrbg,
 		ptrbg->r,
 		&screen,
+		pt(-xy[0], -xy[1]),
 		BlendCopy
 	);
-	screen.r.u0 = 0;
-	screen.r.v0 = 0;
 	blend2(
 		&screen,
-		rect(pt[0], pt[1], pt[0]+rectw(&ptrim->r), pt[1]+recth(&ptrim->r)),
+		rect(xy[0], xy[1], xy[0]+rectw(&ptrim->r), xy[1]+recth(&ptrim->r)),
 		ptrim,
+		pt(0,0),
 		BlendOver
 	);
 }
 
 static void
-ptrundraw(int pt[2])
+ptrundraw(int xy[2])
 {
 	blend2(
 		&screen,
-		rect(pt[0], pt[1], pt[0]+rectw(&ptrim->r), pt[1]+recth(&ptrim->r)),
+		rect(xy[0], xy[1], xy[0]+rectw(&ptrim->r), xy[1]+recth(&ptrim->r)),
 		ptrbg,
+		pt(xy[0],xy[1]),
 		BlendCopy
 	);
 }
@@ -238,16 +239,13 @@ ptrundraw(int pt[2])
 static void
 ptrflush(Rect r)
 {
-	screen.r.u0 = iclamp(r.u0, screen.r.u0, screen.r.uend);
-	screen.r.v0 = iclamp(r.v0, screen.r.v0, screen.r.vend);
 	blend2(
 		&phys,
 		r,
 		&screen,
+		pt(0, 0),
 		BlendCopy
 	);
-	screen.r.u0 = 0;
-	screen.r.v0 = 0;
 }
 
 void
@@ -345,7 +343,7 @@ drawevents2(int block, Input **inepp)
 	fd_set rset;
 	int i, j, n, maxfd;
 
-	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
+	//drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
 		drawflush(screen.r);
 		screen.dirty = 0;
