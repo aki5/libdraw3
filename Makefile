@@ -1,12 +1,21 @@
 ROOT=..
 
-CFLAGS=-Os -fomit-frame-pointer -W -Wall
+CFLAGS=-Os -fomit-frame-pointer -W -Wall -I/opt/local/include
 TARGET_ARCH=port
 ifeq ($(shell uname -m), armv6l)
 	TARGET_ARCH=arm6
 endif
 
-all: $(ROOT)/libdraw3/libdraw3-x11.a $(ROOT)/libdraw3/libdraw3-linuxfb.a
+TARGETS=
+ifeq ($(shell uname -s), Darwin)
+	TARGETS+=$(ROOT)/libdraw3/libdraw3-x11.a
+endif
+ifeq ($(shell uname -s), Linux)
+	TARGETS+=$(ROOT)/libdraw3/libdraw3-x11.a
+	TARGETS+=$(ROOT)/libdraw3/libdraw3-linuxfb.a
+endif
+
+all: $(TARGETS)
 
 include libdraw3.mk
 
