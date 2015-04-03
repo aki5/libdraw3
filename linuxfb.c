@@ -26,12 +26,13 @@ static int eventfd[32];
 static int neventfd;
 
 uchar *framebuffer;
+int framebuffer_bpp;
+int framebuffer_stride;
 
 Image *debug;
 Image *ptrim;
 Image *ptrbg;
 
-Image phys;
 Image screen;
 
 #define DEV_INPUT_EVENTX 1
@@ -126,13 +127,17 @@ retry_varinfo:
 		goto errout;
 	}
 
+
 	switch(varinfo.bits_per_pixel){
 	case 32:
+	case 16:
 		break;
 	default:
 		fprintf(stderr, "drawinit: %d bits per pixel not supported (want 32)\n", varinfo.bits_per_pixel);
 		goto errout;
 	}
+	framebuffer_bpp = varinfo.bits_per_pixel;
+	framebuffer_stride = (varinfo.xres*framebuffer_bpp)/8;
 
 	if(0)
 	if(varinfo.yres_virtual < 2*varinfo.yres){
@@ -154,16 +159,11 @@ retry_varinfo:
 	close(fd);
 
 	screen.r = rect(0, 0, varinfo.xres, varinfo.yres);
-	screen.len = fixinfo.smem_len;
-	screen.stride = fixinfo.line_length;
+	screen.len = 4*varinfo.yres*varinfo.xres;
+	screen.stride = 4*varinfo.xres;
 	screen.img = mmap(NULL, screen.len, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_ANONYMOUS, -1, 0);
 	memset(screen.img, 0, screen.len); /* just to fault it in.. */
 
-	/* just for drawing the pointer */
-	phys.r = screen.r;
-	phys.len = screen.len;
-	phys.stride = screen.stride;
-	phys.img = framebuffer;
 
 	/* disable blink if we can but shut up if we can not */
 	if((fd = open("/sys/class/graphics/fbcon/cursor_blink", O_WRONLY)) != -1){
@@ -239,13 +239,37 @@ ptrundraw(int xy[2])
 static void
 ptrflush(Rect r)
 {
-	blend2(
-		&phys,
-		r,
-		&screen,
-		pt(0, 0),
-		BlendCopy
-	);
+	r = cliprect(r, screen.r);
+	if(framebuffer_bpp == 16){
+		int i;
+		uchar *src, *dst;
+		int dvoff, svoff;
+		int iend;
+
+		src = screen.img;
+		dst = (uchar*)framebuffer;
+		iend = recth(&r);
+		svoff = r.v0*screen.stride + 4*r.u0;
+		dvoff = r.v0*framebuffer_stride + 2*r.u0;
+		for(i = 0; i < iend; i++){
+			pixcpy_dst16(dst+dvoff, src+svoff, 4*rectw(&r));
+			svoff += screen.stride;
+			dvoff += framebuffer_stride;
+		}
+	} else if(framebuffer_bpp == 32){
+		int i;
+		uchar *src, *dst;
+		int voff;
+		int iend;
+		src = screen.img;
+		dst = (uchar*)framebuffer;
+		iend = recth(&r);
+		voff = r.v0*screen.stride + 4*r.u0;
+		for(i = 0; i < iend; i++){
+			memcpy(dst+voff, src+voff, 4*rectw(&r));
+			voff += screen.stride;
+		}
+	} else abort();
 }
 
 void
@@ -253,7 +277,26 @@ drawflush(Rect r)
 {
 	USED(r);
 	ptrdraw(mousexy);
-	memcpy(framebuffer, screen.img, screen.len);
+
+	if(framebuffer_bpp == 16){
+		int i;
+		uchar *src, *dst;
+		int dvoff, svoff;
+		int iend;
+
+		src = screen.img;
+		dst = (uchar*)framebuffer;
+		iend = screen.r.vend;
+		svoff = 0;
+		dvoff = 0;
+		for(i = 0; i < iend; i++){
+			pixcpy_dst16(dst+dvoff, src+svoff, screen.stride);
+			svoff += screen.stride;
+			dvoff += framebuffer_stride;
+		}
+	} else if(framebuffer_bpp == 32){
+		memcpy(framebuffer, screen.img, screen.len);
+	} else abort();
 }
 
 void
