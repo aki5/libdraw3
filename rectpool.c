@@ -11,7 +11,7 @@ rowunused(Rectpool *rpool, Rectrow *row)
 }
 
 static void
-addcol(Rectrow *row, short u0, short w)
+addcol(Rectrow *row, intcoord u0, intcoord w)
 {
 	Rectcol *col;
 	int i;
@@ -34,7 +34,7 @@ addcol(Rectrow *row, short u0, short w)
 }
 
 static Rectrow *
-addrow(Rectpool *rpool, short v0, short h)
+addrow(Rectpool *rpool, intcoord v0, intcoord h)
 {
 	Rectrow *row;
 	int i;
@@ -59,11 +59,11 @@ addrow(Rectpool *rpool, short v0, short h)
 	return row;
 }
 
-static short
-getsegr(short *segr, int nsegr, int val)
+static intcoord
+getsegr(intcoord *segr, int nsegr, int val)
 {
 	int i;
-	short segrval;
+	intcoord segrval;
 
 	segrval = -1;
 	for(i = 0; i < nsegr; i++){
@@ -82,7 +82,7 @@ rectpool_bestfit(Rectpool *rpool, int bestfit)
 }
 
 void
-rectpool_setsegr(Rectpool *rpool, short *segr, int nsegr)
+rectpool_setsegr(Rectpool *rpool, intcoord *segr, int nsegr)
 {
 	int i;
 	nsegr = nsegr < rpool->asegr ? nsegr : rpool->asegr;
@@ -95,7 +95,7 @@ void
 rectpool_harmonic(Rectpool *rpool, int max, int n)
 {
 	int i, j;
-	short tmp;
+	intcoord tmp;
 	j = 0;
 	for(i = 0; i < n; i++){
 		tmp = max/(n-i);
@@ -114,7 +114,7 @@ void
 initrectpool(Rectpool *rpool, Rect r)
 {
 	int i;
-	short *segr, s, tmp;
+	intcoord *segr, s, tmp;
 	int sum;
 
 	memset(rpool, 0, sizeof rpool[0]);
@@ -158,7 +158,7 @@ rectalloc(Rectpool *rpool, int w, int h, Rect *rp)
 {
 	Rectrow *row;
 	Rectcol *col;
-	short wsegr, hsegr;
+	intcoord wsegr, hsegr;
 	int i, j;
 
 	if(w <= 0 || h <= 0)

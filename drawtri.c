@@ -6,7 +6,7 @@
  *	the top-left rule: move a bottom edge up and the right edge left
  */
 static inline int
-topleft(short *a, short *b)
+topleft(intcoord *a, intcoord *b)
 {
 	if(a[1] == b[1] && a[0] < b[0]) /* bottom */
 		return -1;
@@ -16,7 +16,7 @@ topleft(short *a, short *b)
 }
 
 static inline void
-drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uchar *color)
+drawtri_horse(Image *dst, Rect *dstr, intcoord *a, intcoord *b, intcoord *c, int pscl, uchar *color)
 {
         u32int *dstp;
         u32int *dst_ustart;
@@ -44,7 +44,7 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 	cap_dy = ori2i_dy(c, a) << pscl;
 
 	/* top-left corner of our scan region needs to be scaled */
-	short pstart[2] = {
+	intcoord pstart[2] = {
 		dstr->u0 << pscl,
 		dstr->v0 << pscl
 	};
@@ -128,7 +128,7 @@ drawtri_horse(Image *dst, Rect *dstr, short *a, short *b, short *c, int pscl, uc
 }
 
 static void
-rect_trisetup(Rect *r, short *a, short *b, short *c, int pscl)
+rect_trisetup(Rect *r, intcoord *a, intcoord *b, intcoord *c, int pscl)
 {
 	r->u0 = maxi(r->u0 << pscl, mini(a[0], mini(b[0], c[0])));
 	r->v0 = maxi(r->v0 << pscl, mini(a[1], mini(b[1], c[1])));
@@ -141,7 +141,7 @@ rect_trisetup(Rect *r, short *a, short *b, short *c, int pscl)
 }
 
 void
-drawtri(Image *dst, Rect r, short *a, short *b, short *c, uchar *color)
+drawtri(Image *dst, Rect r, intcoord *a, intcoord *b, intcoord *c, uchar *color)
 {
 	dst->dirty = 1;
 	r = cliprect(r, dst->r);
@@ -150,7 +150,7 @@ drawtri(Image *dst, Rect r, short *a, short *b, short *c, uchar *color)
 }
 
 void
-drawtri_pscl(Image *dst, Rect r, short *a, short *b, short *c, int pscl, uchar *color)
+drawtri_pscl(Image *dst, Rect r, intcoord *a, intcoord *b, intcoord *c, int pscl, uchar *color)
 {
 	dst->dirty = 1;
 	r = cliprect(r, dst->r);

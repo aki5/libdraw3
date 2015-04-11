@@ -103,13 +103,13 @@ sqpushfree(Sqpool *pool, Sqnode *np)
 }
 
 static Sqcent *
-newcent(int rank, short u0, short v0)
+newcent(int rank, intcoord u0, intcoord v0)
 {
 	Sqcent *cent;
 	Sqnode *np, *ep;
 	int i;
-	short u0topleft, v0topleft;
-	short fibcur, fibprev;
+	intcoord u0topleft, v0topleft;
+	intcoord fibcur, fibprev;
 
 	if(rank < 0)
 		return NULL;
@@ -213,7 +213,7 @@ newcent(int rank, short u0, short v0)
 }
 
 static Sqnode *
-rootnode(int rank, short u0, short v0)
+rootnode(int rank, intcoord u0, intcoord v0)
 {
 	Sqnode *np;
 	np = malloc(sizeof np[0]);
@@ -478,10 +478,10 @@ roundup(int v)
 }
 
 void
-spinpt(float a, float scale, short *pt)
+spinpt(float a, float scale, intcoord *pt)
 {
-	short ptu, ptv;
-	short *cent = pt(
+	intcoord ptu, ptv;
+	intcoord *cent = pt(
 		rectw(&screen.r)/2,
 		recth(&screen.r)/2
 	);
@@ -496,10 +496,10 @@ spintri(float a, int coloridx, int dst, int xoff)
 {
 	uchar color[4];
 
-	short *pta = pt(0,recth(&screen.r)/2-2*dst), *ptb = pt(dst/2,0), *ptc = pt(-dst/2,0);
-	short ptx[2], pty[2], ptz[2];
-	short off = xoff;
-	short *cent = pt(
+	intcoord *pta = pt(0,recth(&screen.r)/2-2*dst), *ptb = pt(dst/2,0), *ptc = pt(-dst/2,0);
+	intcoord ptx[2], pty[2], ptz[2];
+	intcoord off = xoff;
+	intcoord *cent = pt(
 		rectw(&screen.r)/2,
 		recth(&screen.r)/2
 	);
@@ -728,13 +728,13 @@ idx2color(11, color);
 if(0){
 if(circle){
 	a = fmod(tm/20.0*2.0*M_PI, 2.0*M_PI);
-	short *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
+	intcoord *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
 	spinpt(a, 16.0f, apt);
 	drawcircle(&screen, screen.r, apt, 100<<4, 4, color);
 } else {
 	a = fmod(tm/20.0*2.0*M_PI, 2.0*M_PI);
-	short *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
-	short *bpt = pt(rectw(&screen.r)/2-100, recth(&screen.r)/2-100);
+	intcoord *apt = pt(rectw(&screen.r)/2+100, recth(&screen.r)/2+100);
+	intcoord *bpt = pt(rectw(&screen.r)/2-100, recth(&screen.r)/2-100);
 	spinpt(a, 16.0f, apt);
 	spinpt(a, 16.0f, bpt);
 	drawellipse(&screen, screen.r, apt, bpt, 100<<4, 4, color);

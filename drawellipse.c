@@ -4,14 +4,14 @@
 #include "imgtools.h"
 
 void
-drawellipse(Image *dst, Rect dstr, short *a, short *b, short rad, int pscl, uchar *color)
+drawellipse(Image *dst, Rect dstr, intcoord *a, intcoord *b, intcoord rad, int pscl, uchar *color)
 {
 	u32int *dstp, *dst_end, *dst_ustart, *dst_uend;
 	u32int color32;
 	int dst_stride;
 	int u, v;
-	short ab[2];
-	short tmp;
+	intcoord ab[2];
+	intcoord tmp;
 
 
 	/* todo: do the bounding box right. this one's way too large */

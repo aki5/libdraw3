@@ -50,15 +50,16 @@ enum {
 	BlendRmask,
 };
 
+typedef int intcoord;
 typedef struct Rect Rect;
 typedef struct Image Image;
 typedef struct Input Input;
 
 struct Rect {
-	int u0;
-	int v0;
-	int uend;
-	int vend;
+	intcoord u0;
+	intcoord v0;
+	intcoord uend;
+	intcoord vend;
 };
 
 struct Image {
@@ -71,7 +72,7 @@ struct Image {
 
 struct Input {
 	int mouse;
-	short xy[2];
+	intcoord xy[2];
 	u64int begin;
 	u64int on;
 	u64int end;
@@ -79,7 +80,7 @@ struct Input {
 };
 
 static inline int
-ptinrect(short *uv, Rect *r)
+ptinrect(intcoord *uv, Rect *r)
 {
 	if(uv[0] >= r->u0 && uv[0] < r->uend && uv[1] >= r->v0 && uv[1] < r->vend)
 		return 1;
@@ -92,8 +93,8 @@ rectempty(Rect r)
 	return r.u0 >= r.uend || r.v0 >= r.vend;
 }
 
-static inline short
-iclamp(short i, short start, short end)
+static inline intcoord
+iclamp(intcoord i, intcoord start, intcoord end)
 {
 	if(i < start)
 		i = start;
@@ -103,9 +104,9 @@ iclamp(short i, short start, short end)
 }
 
 static inline int
-ptinellipse(short *uv, short *c, short *d, int rad)
+ptinellipse(intcoord *uv, intcoord *c, intcoord *d, int rad)
 {
-	short d1[2], d2[2];
+	intcoord d1[2], d2[2];
 	int mag1, mag2;
 
 	d1[0] = uv[0] - c[0];
@@ -168,9 +169,9 @@ insetrect(Rect r, int border)
 
 static inline int rectw(Rect *r){ return r->uend-r->u0; }
 static inline int recth(Rect *r){ return r->vend-r->v0; }
-static inline void rectmidpt(Rect *r, short *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
+static inline void rectmidpt(Rect *r, intcoord *pt){ pt[0] = (r->uend+r->u0)/2; pt[1] = (r->vend+r->v0)/2; }
 
-#define pt(a, b) (short[]){a, b}
+#define pt(a, b) (intcoord[]){a, b}
 #define rect(a, b, c, d) (Rect){.u0=a, .v0=b, .uend=c, .vend=d}
 #define color(r, g, b, a) (uchar[]){b, g, r, a}
 
@@ -235,17 +236,17 @@ void drawreq(void);
 int drawbusy(void);
 int drawhalt(void);
 
-void drawellipse(Image *dst, Rect dstr, short *a, short *b, short rad, int pscl, uchar *color);
-//void drawtri(uchar *img, int width, int height, short *a, short *b, short *c, uchar *color, int subpix);
-void drawtri(Image *img, Rect r, short *a, short *b, short *c, uchar *color);
-void drawtri_pscl(Image *img, Rect r, short *a, short *b, short *c, int pscl, uchar *color);
-int drawpoly(uchar *img, int width, int height, short *pt, int *poly, int npoly, uchar *color, int subpix);
-void drawtris(uchar *img, int width, int height, short *tris, uchar *colors, int ntris, int subpix);
+void drawellipse(Image *dst, Rect dstr, intcoord *a, intcoord *b, intcoord rad, int pscl, uchar *color);
+//void drawtri(uchar *img, int width, int height, intcoord *a, intcoord *b, intcoord *c, uchar *color, int subpix);
+void drawtri(Image *img, Rect r, intcoord *a, intcoord *b, intcoord *c, uchar *color);
+void drawtri_pscl(Image *img, Rect r, intcoord *a, intcoord *b, intcoord *c, int pscl, uchar *color);
+int drawpoly(uchar *img, int width, int height, intcoord *pt, int *poly, int npoly, uchar *color, int subpix);
+void drawtris(uchar *img, int width, int height, intcoord *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
 
-void blendcircle(Image *dst, Rect dstr, Image *src, int opcode, short *pt, short rad, int pscl);
-void blend(Image *dst, Rect r, short *off, Image *src, Image *mask, int opcode);
-void blend2(Image *dst, Rect r, Image *src, short *off, int opcode);
+void blendcircle(Image *dst, Rect dstr, Image *src, int opcode, intcoord *pt, intcoord rad, int pscl);
+void blend(Image *dst, Rect r, intcoord *off, Image *src, Image *mask, int opcode);
+void blend2(Image *dst, Rect r, Image *src, intcoord *off, int opcode);
 
 
 
@@ -270,12 +271,12 @@ int utf8decode(char *str, int *offp, int len);
 int utf8encode(char *str, int cap, int code);
 
 static inline void
-drawpixel(Image *img, short *pt, uchar *color)
+drawpixel(Image *img, intcoord *pt, uchar *color)
 {
 	drawrect(img, rect(pt[0],pt[1],pt[0]+1,pt[1]+1), color);
 }
 
-void drawline(uchar *img, int width, int height, short *a, short *b, uchar *color);
+void drawline(uchar *img, int width, int height, intcoord *a, intcoord *b, uchar *color);
 void idx2color(int idx, uchar *color);
 Input *getinputs(Input **ep);
 
@@ -306,15 +307,15 @@ det2i(
 }
 
 static inline int
-dot2i(short *a, short *b)
+dot2i(intcoord *a, intcoord *b)
 {
 	return a[0]*b[0] + a[1]*b[1];
 }
 
 static inline int
-ori2i(short *pa, short *pb, short *pc)
+ori2i(intcoord *pa, intcoord *pb, intcoord *pc)
 {
-	short a, b, c, d;
+	intcoord a, b, c, d;
 	a = pb[0]-pc[0];
 	b = pb[1]-pc[1];
 	c = pa[0]-pc[0];
@@ -323,9 +324,9 @@ ori2i(short *pa, short *pb, short *pc)
 }
 
 static inline int
-nori2i(short *pa, short *pb, short *pc)
+nori2i(intcoord *pa, intcoord *pb, intcoord *pc)
 {
-	short a, b, c, d;
+	intcoord a, b, c, d;
 	a = pb[0]-pa[0];
 	b = pb[1]-pa[1];
 	c = pc[0]-pa[0];
@@ -333,20 +334,20 @@ nori2i(short *pa, short *pb, short *pc)
 	return det2i(a, b, c, d);
 }
 
-static inline short
-ori2i_dx(short *pa, short *pb)
+static inline intcoord
+ori2i_dx(intcoord *pa, intcoord *pb)
 {
 	return (pb[1] - pa[1]);
 }
 
-static inline short
-ori2i_dy(short *pa, short *pb)
+static inline intcoord
+ori2i_dy(intcoord *pa, intcoord *pb)
 {
 	return -(pb[0] - pa[0]);
 }
 
 static inline int
-ptonseg_col(short *a, short *b, short *p)
+ptonseg_col(intcoord *a, intcoord *b, intcoord *p)
 {
 	return
 		p[0] <= maxi(a[0], b[0]) &&
@@ -356,7 +357,7 @@ ptonseg_col(short *a, short *b, short *p)
 }
 
 static inline int
-isect2i(short *a, short *b, short *c, short *d)
+isect2i(intcoord *a, intcoord *b, intcoord *c, intcoord *d)
 {
 	int abc, abd;
 	int cda, cdb;
@@ -379,10 +380,10 @@ isect2i(short *a, short *b, short *c, short *d)
 }
 
 static inline int
-polysegisect(short *pt, int *poly, int npoly, int a, int b)
+polysegisect(intcoord *pt, int *poly, int npoly, int a, int b)
 {
-	short *pa, *pb;
-	short *pc, *pd;
+	intcoord *pa, *pb;
+	intcoord *pc, *pd;
 	int j;
 	pa = pt + 2*a;
 	pb = pt + 2*b;
@@ -397,9 +398,9 @@ polysegisect(short *pt, int *poly, int npoly, int a, int b)
 }
 
 static inline int
-polyarea(short *pt, int *poly, int npoly, short *p)
+polyarea(intcoord *pt, int *poly, int npoly, intcoord *p)
 {
-	short *a, *b;
+	intcoord *a, *b;
 	int area;
 	int i, ni;
 	area = 0;
@@ -413,9 +414,9 @@ polyarea(short *pt, int *poly, int npoly, short *p)
 }
 
 static inline int
-ptarea(short *pt, int npt, short *p)
+ptarea(intcoord *pt, int npt, intcoord *p)
 {
-	short *a, *b;
+	intcoord *a, *b;
 	int area;
 	int i, ni;
 	area = 0;

@@ -126,12 +126,12 @@ freeimage(Image *img)
 
 static struct {
 	int code;
-	short uoff;
-	short voff;
-	short uadv;
-	short vadv;
-	short width;
-	short height;
+	intcoord uoff;
+	intcoord voff;
+	intcoord uadv;
+	intcoord vadv;
+	intcoord width;
+	intcoord height;
 	Image *img;
 } *cache[65536];
 
@@ -151,7 +151,7 @@ setfontsize(int size)
 }
 
 Image *
-glyphsetup(int code, short *uoffp, short *voffp, short *uadvp, short *vadvp, short *width, short *height)
+glyphsetup(int code, intcoord *uoffp, intcoord *voffp, intcoord *uadvp, intcoord *vadvp, intcoord *width, intcoord *height)
 {
 	Rect rgly;
 	Image *glyim;
@@ -226,7 +226,7 @@ drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 {
 	Image *glyim;
 	Rect rret;
-	short uoff, voff, uadv, vadv, width, height;
+	intcoord uoff, voff, uadv, vadv, width, height;
 
 	rret.u0 = rdst.u0;
 	rret.uend = rdst.u0;
