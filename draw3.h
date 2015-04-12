@@ -253,6 +253,7 @@ void blend2(Image *dst, Rect r, Image *src, intcoord *off, int opcode);
 void drawanimate(int flag);
 void loadimage8(Image *img, Rect clipr, uchar *data, int stride);
 Image *allocimage(Rect r, uchar *color);
+void freeimage(Image *img);
 
 void pixset(uchar *dst, uchar *val, int len);
 void pixcpy_dst16(uchar *dst, uchar *src, int nbytes);
