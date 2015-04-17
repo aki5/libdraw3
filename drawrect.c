@@ -82,6 +82,16 @@ blend(Image *dst, Rect r, intcoord *off, Image *src0, Image *src1, int opcode)
 				add_wrap(src0p, 1, src0_ustart, src0_uend);
 				dstp++;
 			}
+		} else if(opcode == BlendSub){
+			while(dstp < dst_uend){
+				__builtin_prefetch(dstp+16);
+				__builtin_prefetch(src0p+16);
+				__builtin_prefetch(src1p+16);
+				*dstp = blend32_sub(*dstp, blend32_mask(*src0p, *src1p));
+				add_wrap(src1p, 1, src1_ustart, src1_uend);
+				add_wrap(src0p, 1, src0_ustart, src0_uend);
+				dstp++;
+			}
 		} else {
 			fprintf(stderr, "blend: unsupported opcode %d\n", opcode);
 			abort();

@@ -250,7 +250,7 @@ addinput(int x, int y, char *utf8key, u64int mod, int isbegin, int isend)
  *	drawevents2 calls flush to display anything that was drawn.
  */
 static Input *
-drawevents2(int block, Input **inepp)
+drawevents2(int block, int *ninp)
 {
 	static int flushing;
 
@@ -450,7 +450,7 @@ fprintf(stderr, "hyper\n");
 					width = ce->width;
 					height = ce->height;
 					if(shminit() == -1){
-						*inepp = NULL;
+						*ninp = 0;
 						return NULL;
 					}
 					addredraw();
@@ -469,24 +469,24 @@ fprintf(stderr, "hyper\n");
 	}
 
 	if(!flushing && ninputs > 0){
-		*inepp = inputs+ninputs;
+		*ninp = ninputs;
 		return inputs;
 	}
 
-	*inepp = NULL;
+	*ninp = 0;
 	return NULL;
 }
 
 Input *
-drawevents(Input **inepp)
+drawevents(int *ninp)
 {
-	return drawevents2(1, inepp);
+	return drawevents2(1, ninp);
 }
 
 Input *
-drawevents_nonblock(Input **inepp)
+drawevents_nonblock(int *ninp)
 {
-	return drawevents2(0, inepp);
+	return drawevents2(0, ninp);
 }
 
 int

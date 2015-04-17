@@ -207,12 +207,11 @@ freeglyph(Image *img)
  *	no matter how much we fudge it, there's always a chance of
  *	drawchar overflowing its rect.
  */
+
 int
-linespace(void)
+fontheight(void)
 {
 	return (face->size->metrics.height+63)/64+1;
-//return (face->size->metrics.height+63)/64 + 2;
-//return 15*fontsize/10;
 }
 
 int
@@ -232,7 +231,7 @@ drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 	rret.uend = rdst.u0;
 
 	rret.v0 = rdst.v0;
-	rret.vend = rdst.v0 + linespace();
+	rret.vend = rdst.v0 + fontheight();
 
 	glyim = glyphsetup(charcode, &uoff, &voff, &uadv, &vadv, &width, &height);
 	if(glyim == NULL)
@@ -266,7 +265,7 @@ drawstr(Image *img, Rect rdst, Image *src, int opcode, char *str, int len)
 	rret.uend = rdst.u0;
 
 	rret.v0 = rdst.v0;
-	rret.vend = rdst.v0 + linespace();
+	rret.vend = rdst.v0 + fontheight();
 
 	for(off = 0; off < len && rdst.u0 < rdst.uend;){
 		int doff;

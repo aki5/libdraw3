@@ -228,8 +228,8 @@ redraw(Input *inp)
 
 
 int drawinit(int w, int h);
-Input *drawevents(Input **inepp);
-Input *drawevents_nonblock(Input **inepp);
+Input *drawevents(int *ninp);
+Input *drawevents_nonblock(int *ninp);
 
 int drawfd(void);
 void drawreq(void);
@@ -260,7 +260,7 @@ void pixcpy_dst16(uchar *dst, uchar *src, int nbytes);
 void pixcpy_src8(uchar *dst, uchar *src, int nsrc);
 
 void initdrawstr(char *path);
-int linespace(void);
+int fontheight(void);
 
 Rect drawstr(Image *img, Rect r, Image *src, int opcode, char *str, int len);
 Rect drawchar(Image *img, Rect rdst, Image *color, int opcode, int charcode);

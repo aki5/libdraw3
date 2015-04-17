@@ -380,13 +380,13 @@ static int initdone;
  *	drawevents2 calls flush to display anything that was drawn.
  */
 static Input *
-drawevents2(int block, Input **inepp)
+drawevents2(int block, int *ninp)
 {
 	struct timeval timeout;
 	fd_set rset;
 	int i, j, n, maxfd;
 
-	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+linespace(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
+	drawstr(&screen, rect(screen.r.uend-50*fontem(),screen.r.v0+fontheight(),screen.r.uend,screen.r.vend), debug, BlendOver, debugmsg, debuglen);
 	if(screen.dirty){
 		drawflush(screen.r);
 		screen.dirty = 0;
@@ -649,24 +649,24 @@ keybdone:
 	}
 
 	if(ninputs > 0){
-		*inepp = inputs+ninputs;
+		*ninp = ninputs;
 		return inputs;
 	}
 
-	*inepp = NULL;
+	*ninp = 0;
 	return NULL;
 }
 
 Input *
-drawevents(Input **inepp)
+drawevents(int *ninp)
 {
-	return drawevents2(1, inepp);
+	return drawevents2(1, ninp);
 }
 
 Input *
-drawevents_nonblock(Input **inepp)
+drawevents_nonblock(int *ninp)
 {
-	return drawevents2(0, inepp);
+	return drawevents2(0, ninp);
 }
 
 int
