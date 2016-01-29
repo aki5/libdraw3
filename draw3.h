@@ -226,7 +226,6 @@ redraw(Input *inp)
 	return (inp->begin & Redraw) != 0;
 }
 
-
 int drawinit(int w, int h);
 Input *drawevents(int *ninp);
 Input *drawevents_nonblock(int *ninp);
@@ -244,11 +243,10 @@ int drawpoly(uchar *img, int width, int height, intcoord *pt, int *poly, int npo
 void drawtris(uchar *img, int width, int height, intcoord *tris, uchar *colors, int ntris, int subpix);
 void drawrect(Image *img, Rect r, uchar *color);
 
-void blendcircle(Image *dst, Rect dstr, Image *src, int opcode, intcoord *pt, intcoord rad, int pscl);
-void blend(Image *dst, Rect r, intcoord *off, Image *src, Image *mask, int opcode);
+void blendcircle(Image *dst, Rect dstr, Image *src, intcoord *off, int opcode, intcoord *pt, intcoord rad, int pscl);
+//void blend(Image *dst, Rect r, Image *src, intcoord *off, Image *mask, int opcode);
+void blend(Image *dst, Rect r, Image *src0, intcoord *off0, Image *src1, intcoord *off1, int opcode);
 void blend2(Image *dst, Rect r, Image *src, intcoord *off, int opcode);
-
-
 
 void drawanimate(int flag);
 void loadimage8(Image *img, Rect clipr, uchar *data, int stride);

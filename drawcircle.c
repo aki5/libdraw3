@@ -3,7 +3,7 @@
 #include "imgtools.h"
 
 void
-blendcircle(Image *dst, Rect dstr, Image *src, int opcode, intcoord *p, intcoord rad, int pscl)
+blendcircle(Image *dst, Rect dstr, Image *src, intcoord *off, int opcode, intcoord *p, intcoord rad, int pscl)
 {
 	u32int *dstp, *dst_end, *dst_ustart, *dst_uend;
 	u32int color32;

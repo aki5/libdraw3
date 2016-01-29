@@ -5,10 +5,11 @@
 #define add_wrap(ptr, d, start, end) ptr = ptr+d; ptr = ptr < end ? ptr : start
 
 void
-blend(Image *dst, Rect r, intcoord *off, Image *src0, Image *src1, int opcode)
+blend(Image *dst, Rect r, Image *src0, intcoord *off0, Image *src1, intcoord *off1, int opcode)
 {
 	Rect dstr;
-	int uoff, voff;
+	int uoff0, voff0;
+	int uoff1, voff1;
 
 	if(rectisect(r, dst->r) == 0)
 		return;
@@ -16,8 +17,11 @@ blend(Image *dst, Rect r, intcoord *off, Image *src0, Image *src1, int opcode)
 	dstr = cliprect(r, dst->r);
 	dst->dirty = 1;
 
-	uoff = dstr.u0 - off[0];
-	voff = dstr.v0 - off[1];
+	uoff0 = dstr.u0 - off0[0];
+	voff0 = dstr.v0 - off0[1];
+
+	uoff1 = dstr.u0 - off1[0];
+	voff1 = dstr.v0 - off1[1];
 
 	u32int *dstp, *src0p, *src1p;
 	u32int *src0_vstart, *src1_vstart;
@@ -27,12 +31,12 @@ blend(Image *dst, Rect r, intcoord *off, Image *src0, Image *src1, int opcode)
 	u32int *dst_ustart, *src0_ustart, *src1_ustart;
 	u32int *dst_uend, *src0_uend, *src1_uend;
 
-	src0_vstart = img_vstart(src0, uoff);
-	src1_vstart = img_vstart(src1, uoff);
+	src0_vstart = img_vstart(src0, uoff0);
+	src1_vstart = img_vstart(src1, uoff1);
 
 	dst_ustart = img_uvstart(dst, dstr.u0, dstr.v0, 1);
-	src0_ustart = img_uvstart(src0, uoff, voff, 0);
-	src1_ustart = img_uvstart(src1, uoff, voff, 0);
+	src0_ustart = img_uvstart(src0, uoff0, voff0, 0);
+	src1_ustart = img_uvstart(src1, uoff1, voff1, 0);
 
 	__builtin_prefetch(dst_ustart);
 	__builtin_prefetch(src0_ustart);
@@ -50,8 +54,8 @@ blend(Image *dst, Rect r, intcoord *off, Image *src0, Image *src1, int opcode)
 	src1_end = img_end(src1);
 
 	dst_uend = dst_ustart + rectw(&dstr);
-	src0_uwrapoff = img_uwrap(src0, uoff); 
-	src1_uwrapoff = img_uwrap(src1, uoff); 
+	src0_uwrapoff = img_uwrap(src0, uoff0);
+	src1_uwrapoff = img_uwrap(src1, uoff1); 
 
 	while(dst_ustart < dst_end){
 

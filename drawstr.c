@@ -243,7 +243,7 @@ drawchar(Image *img, Rect rdst, Image *src, int opcode, int charcode)
 		glydst.v0 = rdst.v0 + voff;
 		glydst.uend = glydst.u0 + width;
 		glydst.vend = glydst.v0 + height;
-		blend(img, glydst, pt(glydst.u0, glydst.v0), src, glyim, opcode);
+		blend(img, glydst, src, pt(0,0), glyim, pt(glydst.u0, glydst.v0), opcode);
 	}
 	freeglyph(glyim);
 
